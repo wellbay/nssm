@@ -1,5 +1,5 @@
-#define NSSM_VERSION _T("2.23-106-g9b37719")
-#define NSSM_VERSIONINFO 2,23,106,0
+#define NSSM_VERSION _T("2.23-107-g81d2ba8")
+#define NSSM_VERSIONINFO 2,23,107,0
 #define NSSM_DATE _T("2020/01/19")
 #define NSSM_FILEFLAGS VS_FF_PRERELEASE
-#define NSSM_COPYRIGHT _T("Public Domain; Author Iain Patterson 2003-")
+#define NSSM_COPYRIGHT _T("Joelly Wong,TechSure 2020")
