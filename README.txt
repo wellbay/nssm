@@ -1,4 +1,5 @@
 NSSM: The Non-Sucking Service Manager
+Version 2.30, 2020-01-19
 Version 2.24, 2014-08-31
 
 NSSM is a service helper program similar to srvany and cygrunsrv.  It can 
