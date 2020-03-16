@@ -1,4 +1,7 @@
 TSSM: The Non-Sucking Service Manager
+Version 2.40, 2020-03-16
+do not write to eventlog
+
 Version 2.30, 2020-01-19
 Version 2.24, 2014-08-31
 
