@@ -4,14 +4,14 @@
 #include <ntsecapi.h>
 
 /* Not really an account.  The canonical name is NT Authority\System. */
-#define NSSM_LOCALSYSTEM_ACCOUNT _T("LocalSystem")
+#define TSSM_LOCALSYSTEM_ACCOUNT _T("LocalSystem")
 /* Other well-known accounts which can start a service without a password. */
-#define NSSM_LOCALSERVICE_ACCOUNT _T("NT Authority\\LocalService")
-#define NSSM_NETWORKSERVICE_ACCOUNT _T("NT Authority\\NetworkService")
+#define TSSM_LOCALSERVICE_ACCOUNT _T("NT Authority\\LocalService")
+#define TSSM_NETWORKSERVICE_ACCOUNT _T("NT Authority\\NetworkService")
 /* Virtual service accounts. */
-#define NSSM_VIRTUAL_SERVICE_ACCOUNT_DOMAIN _T("NT Service")
+#define TSSM_VIRTUAL_SERVICE_ACCOUNT_DOMAIN _T("NT Service")
 /* This is explicitly a wide string. */
-#define NSSM_LOGON_AS_SERVICE_RIGHT L"SeServiceLogonRight"
+#define TSSM_LOGON_AS_SERVICE_RIGHT L"SeServiceLogonRight"
 
 int open_lsa_policy(LSA_HANDLE *);
 int username_sid(const TCHAR *, SID **, LSA_HANDLE *);

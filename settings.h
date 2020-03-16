@@ -1,16 +1,16 @@
 #ifndef SETTINGS_H
 #define SETTINGS_H
 
-#define NSSM_NATIVE_DEPENDONGROUP _T("DependOnGroup")
-#define NSSM_NATIVE_DEPENDONSERVICE _T("DependOnService")
-#define NSSM_NATIVE_DESCRIPTION _T("Description")
-#define NSSM_NATIVE_DISPLAYNAME _T("DisplayName")
-#define NSSM_NATIVE_ENVIRONMENT _T("Environment")
-#define NSSM_NATIVE_IMAGEPATH _T("ImagePath")
-#define NSSM_NATIVE_NAME _T("Name")
-#define NSSM_NATIVE_OBJECTNAME _T("ObjectName")
-#define NSSM_NATIVE_STARTUP _T("Start")
-#define NSSM_NATIVE_TYPE _T("Type")
+#define TSSM_NATIVE_DEPENDONGROUP _T("DependOnGroup")
+#define TSSM_NATIVE_DEPENDONSERVICE _T("DependOnService")
+#define TSSM_NATIVE_DESCRIPTION _T("Description")
+#define TSSM_NATIVE_DISPLAYNAME _T("DisplayName")
+#define TSSM_NATIVE_ENVIRONMENT _T("Environment")
+#define TSSM_NATIVE_IMAGEPATH _T("ImagePath")
+#define TSSM_NATIVE_NAME _T("Name")
+#define TSSM_NATIVE_OBJECTNAME _T("ObjectName")
+#define TSSM_NATIVE_STARTUP _T("Start")
+#define TSSM_NATIVE_TYPE _T("Type")
 
 /* Are additional arguments needed? */
 #define ADDITIONAL_GETTING (1 << 0)

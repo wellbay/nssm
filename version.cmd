@@ -39,11 +39,11 @@ set year=%year:~0,-1%
 if "%BUILD_ID%" == "" set year=
 
 @rem Create version.h.
-@echo>version.h.new #define NSSM_VERSION _T("%description%")
-@echo>>version.h.new #define NSSM_VERSIONINFO %major%,%minor%,%n%,%BUILD_NUMBER%
-@echo>>version.h.new #define NSSM_DATE _T("%DATE%")
-@echo>>version.h.new #define NSSM_FILEFLAGS %flags%
-@echo>>version.h.new #define NSSM_COPYRIGHT _T("Joelly Wong,TechSure 2020")
+@echo>version.h.new #define TSSM_VERSION _T("%description%")
+@echo>>version.h.new #define TSSM_VERSIONINFO %major%,%minor%,%n%,%BUILD_NUMBER%
+@echo>>version.h.new #define TSSM_DATE _T("%DATE%")
+@echo>>version.h.new #define TSSM_FILEFLAGS %flags%
+@echo>>version.h.new #define TSSM_COPYRIGHT _T("Joelly Wong,TechSure 2020")
 
 fc version.h version.h.new >NUL: 2>NUL:
 if %ERRORLEVEL% == 0 (del version.h.new) else (move /y version.h.new version.h)

@@ -1,4 +1,4 @@
-#include "nssm.h"
+#include "tssm.h"
 
 typedef struct {
   TCHAR *name;
@@ -9,15 +9,15 @@ typedef struct {
   kill_t k;
 } hook_t;
 
-const TCHAR *hook_event_strings[] = { NSSM_HOOK_EVENT_START, NSSM_HOOK_EVENT_STOP, NSSM_HOOK_EVENT_EXIT, NSSM_HOOK_EVENT_POWER, NSSM_HOOK_EVENT_ROTATE, NULL };
-const TCHAR *hook_action_strings[] = { NSSM_HOOK_ACTION_PRE, NSSM_HOOK_ACTION_POST, NSSM_HOOK_ACTION_CHANGE, NSSM_HOOK_ACTION_RESUME, NULL };
+const TCHAR *hook_event_strings[] = { TSSM_HOOK_EVENT_START, TSSM_HOOK_EVENT_STOP, TSSM_HOOK_EVENT_EXIT, TSSM_HOOK_EVENT_POWER, TSSM_HOOK_EVENT_ROTATE, NULL };
+const TCHAR *hook_action_strings[] = { TSSM_HOOK_ACTION_PRE, TSSM_HOOK_ACTION_POST, TSSM_HOOK_ACTION_CHANGE, TSSM_HOOK_ACTION_RESUME, NULL };
 
 static unsigned long WINAPI await_hook(void *arg) {
   hook_t *hook = (hook_t *) arg;
-  if (! hook) return NSSM_HOOK_STATUS_ERROR;
+  if (! hook) return TSSM_HOOK_STATUS_ERROR;
 
   int ret = 0;
-  if (WaitForSingleObject(hook->process_handle, hook->deadline) == WAIT_TIMEOUT) ret = NSSM_HOOK_STATUS_TIMEOUT;
+  if (WaitForSingleObject(hook->process_handle, hook->deadline) == WAIT_TIMEOUT) ret = TSSM_HOOK_STATUS_TIMEOUT;
 
   /* Tidy up hook process tree. */
   if (hook->name) hook->k.name = hook->name;
@@ -25,9 +25,9 @@ static unsigned long WINAPI await_hook(void *arg) {
   hook->k.process_handle = hook->process_handle;
   hook->k.pid = hook->pid;
   hook->k.stop_method = ~0;
-  hook->k.kill_console_delay = NSSM_KILL_CONSOLE_GRACE_PERIOD;
-  hook->k.kill_window_delay = NSSM_KILL_WINDOW_GRACE_PERIOD;
-  hook->k.kill_threads_delay = NSSM_KILL_THREADS_GRACE_PERIOD;
+  hook->k.kill_console_delay = TSSM_KILL_CONSOLE_GRACE_PERIOD;
+  hook->k.kill_window_delay = TSSM_KILL_WINDOW_GRACE_PERIOD;
+  hook->k.kill_threads_delay = TSSM_KILL_THREADS_GRACE_PERIOD;
   hook->k.creation_time = hook->creation_time;
   GetSystemTimeAsFileTime(&hook->k.exit_time);
   kill_process_tree(&hook->k, hook->pid);
@@ -46,10 +46,10 @@ static unsigned long WINAPI await_hook(void *arg) {
   if (hook->name) HeapFree(GetProcessHeap(), 0, hook->name);
   HeapFree(GetProcessHeap(), 0, hook);
 
-  if (exitcode == NSSM_HOOK_STATUS_ABORT) return NSSM_HOOK_STATUS_ABORT;
-  if (exitcode) return NSSM_HOOK_STATUS_FAILED;
+  if (exitcode == TSSM_HOOK_STATUS_ABORT) return TSSM_HOOK_STATUS_ABORT;
+  if (exitcode) return TSSM_HOOK_STATUS_FAILED;
 
-  return NSSM_HOOK_STATUS_SUCCESS;
+  return TSSM_HOOK_STATUS_SUCCESS;
 }
 
 static void set_hook_runtime(TCHAR *v, FILETIME *start, FILETIME *now) {
@@ -80,7 +80,7 @@ static void add_thread_handle(hook_thread_t *hook_threads, HANDLE thread_handle,
   int num_threads = hook_threads->num_threads + 1;
   hook_thread_data_t *data = (hook_thread_data_t *) HeapAlloc(GetProcessHeap(), 0, num_threads * sizeof(hook_thread_data_t));
   if (! data) {
-    log_event(EVENTLOG_ERROR_TYPE, NSSM_EVENT_OUT_OF_MEMORY, _T("hook_thread_t"), _T("add_thread_handle()"), 0);
+    log_event(EVENTLOG_ERROR_TYPE, TSSM_EVENT_OUT_OF_MEMORY, _T("hook_thread_t"), _T("add_thread_handle()"), 0);
     return;
   }
 
@@ -99,63 +99,63 @@ bool valid_hook_name(const TCHAR *hook_event, const TCHAR *hook_action, bool qui
   bool valid_action = false;
 
   /* Exit/Post */
-  if (str_equiv(hook_event, NSSM_HOOK_EVENT_EXIT)) {
-    if (str_equiv(hook_action, NSSM_HOOK_ACTION_POST)) return true;
+  if (str_equiv(hook_event, TSSM_HOOK_EVENT_EXIT)) {
+    if (str_equiv(hook_action, TSSM_HOOK_ACTION_POST)) return true;
     if (quiet) return false;
-    print_message(stderr, NSSM_MESSAGE_INVALID_HOOK_ACTION, hook_event);
-    _ftprintf(stderr, _T("%s\n"), NSSM_HOOK_ACTION_POST);
+    print_message(stderr, TSSM_MESSAGE_INVALID_HOOK_ACTION, hook_event);
+    _ftprintf(stderr, _T("%s\n"), TSSM_HOOK_ACTION_POST);
     return false;
   }
 
   /* Power/{Change,Resume} */
-  if (str_equiv(hook_event, NSSM_HOOK_EVENT_POWER)) {
-    if (str_equiv(hook_action, NSSM_HOOK_ACTION_CHANGE)) return true;
-    if (str_equiv(hook_action, NSSM_HOOK_ACTION_RESUME)) return true;
+  if (str_equiv(hook_event, TSSM_HOOK_EVENT_POWER)) {
+    if (str_equiv(hook_action, TSSM_HOOK_ACTION_CHANGE)) return true;
+    if (str_equiv(hook_action, TSSM_HOOK_ACTION_RESUME)) return true;
     if (quiet) return false;
-    print_message(stderr, NSSM_MESSAGE_INVALID_HOOK_ACTION, hook_event);
-    _ftprintf(stderr, _T("%s\n"), NSSM_HOOK_ACTION_CHANGE);
-    _ftprintf(stderr, _T("%s\n"), NSSM_HOOK_ACTION_RESUME);
+    print_message(stderr, TSSM_MESSAGE_INVALID_HOOK_ACTION, hook_event);
+    _ftprintf(stderr, _T("%s\n"), TSSM_HOOK_ACTION_CHANGE);
+    _ftprintf(stderr, _T("%s\n"), TSSM_HOOK_ACTION_RESUME);
     return false;
   }
 
   /* Rotate/{Pre,Post} */
-  if (str_equiv(hook_event, NSSM_HOOK_EVENT_ROTATE)) {
-    if (str_equiv(hook_action, NSSM_HOOK_ACTION_PRE)) return true;
-    if (str_equiv(hook_action, NSSM_HOOK_ACTION_POST)) return true;
+  if (str_equiv(hook_event, TSSM_HOOK_EVENT_ROTATE)) {
+    if (str_equiv(hook_action, TSSM_HOOK_ACTION_PRE)) return true;
+    if (str_equiv(hook_action, TSSM_HOOK_ACTION_POST)) return true;
     if (quiet) return false;
-    print_message(stderr, NSSM_MESSAGE_INVALID_HOOK_ACTION, hook_event);
-    _ftprintf(stderr, _T("%s\n"), NSSM_HOOK_ACTION_PRE);
-    _ftprintf(stderr, _T("%s\n"), NSSM_HOOK_ACTION_POST);
+    print_message(stderr, TSSM_MESSAGE_INVALID_HOOK_ACTION, hook_event);
+    _ftprintf(stderr, _T("%s\n"), TSSM_HOOK_ACTION_PRE);
+    _ftprintf(stderr, _T("%s\n"), TSSM_HOOK_ACTION_POST);
     return false;
   }
 
   /* Start/{Pre,Post} */
-  if (str_equiv(hook_event, NSSM_HOOK_EVENT_START)) {
-    if (str_equiv(hook_action, NSSM_HOOK_ACTION_PRE)) return true;
-    if (str_equiv(hook_action, NSSM_HOOK_ACTION_POST)) return true;
+  if (str_equiv(hook_event, TSSM_HOOK_EVENT_START)) {
+    if (str_equiv(hook_action, TSSM_HOOK_ACTION_PRE)) return true;
+    if (str_equiv(hook_action, TSSM_HOOK_ACTION_POST)) return true;
     if (quiet) return false;
-    print_message(stderr, NSSM_MESSAGE_INVALID_HOOK_ACTION, hook_event);
-    _ftprintf(stderr, _T("%s\n"), NSSM_HOOK_ACTION_PRE);
-    _ftprintf(stderr, _T("%s\n"), NSSM_HOOK_ACTION_POST);
+    print_message(stderr, TSSM_MESSAGE_INVALID_HOOK_ACTION, hook_event);
+    _ftprintf(stderr, _T("%s\n"), TSSM_HOOK_ACTION_PRE);
+    _ftprintf(stderr, _T("%s\n"), TSSM_HOOK_ACTION_POST);
     return false;
   }
 
   /* Stop/Pre */
-  if (str_equiv(hook_event, NSSM_HOOK_EVENT_STOP)) {
-    if (str_equiv(hook_action, NSSM_HOOK_ACTION_PRE)) return true;
+  if (str_equiv(hook_event, TSSM_HOOK_EVENT_STOP)) {
+    if (str_equiv(hook_action, TSSM_HOOK_ACTION_PRE)) return true;
     if (quiet) return false;
-    print_message(stderr, NSSM_MESSAGE_INVALID_HOOK_ACTION, hook_event);
-    _ftprintf(stderr, _T("%s\n"), NSSM_HOOK_ACTION_PRE);
+    print_message(stderr, TSSM_MESSAGE_INVALID_HOOK_ACTION, hook_event);
+    _ftprintf(stderr, _T("%s\n"), TSSM_HOOK_ACTION_PRE);
     return false;
   }
 
   if (quiet) return false;
-  print_message(stderr, NSSM_MESSAGE_INVALID_HOOK_EVENT);
-  _ftprintf(stderr, _T("%s\n"), NSSM_HOOK_EVENT_EXIT);
-  _ftprintf(stderr, _T("%s\n"), NSSM_HOOK_EVENT_POWER);
-  _ftprintf(stderr, _T("%s\n"), NSSM_HOOK_EVENT_ROTATE);
-  _ftprintf(stderr, _T("%s\n"), NSSM_HOOK_EVENT_START);
-  _ftprintf(stderr, _T("%s\n"), NSSM_HOOK_EVENT_STOP);
+  print_message(stderr, TSSM_MESSAGE_INVALID_HOOK_EVENT);
+  _ftprintf(stderr, _T("%s\n"), TSSM_HOOK_EVENT_EXIT);
+  _ftprintf(stderr, _T("%s\n"), TSSM_HOOK_EVENT_POWER);
+  _ftprintf(stderr, _T("%s\n"), TSSM_HOOK_EVENT_ROTATE);
+  _ftprintf(stderr, _T("%s\n"), TSSM_HOOK_EVENT_START);
+  _ftprintf(stderr, _T("%s\n"), TSSM_HOOK_EVENT_STOP);
   return false;
 }
 
@@ -165,7 +165,7 @@ void await_hook_threads(hook_thread_t *hook_threads, SERVICE_STATUS_HANDLE statu
 
   int *retain = (int *) HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, hook_threads->num_threads * sizeof(int));
   if (! retain) {
-    log_event(EVENTLOG_ERROR_TYPE, NSSM_EVENT_OUT_OF_MEMORY, _T("retain"), _T("await_hook_threads()"), 0);
+    log_event(EVENTLOG_ERROR_TYPE, TSSM_EVENT_OUT_OF_MEMORY, _T("retain"), _T("await_hook_threads()"), 0);
     return;
   }
 
@@ -193,7 +193,7 @@ void await_hook_threads(hook_thread_t *hook_threads, SERVICE_STATUS_HANDLE statu
   if (num_threads) {
     hook_thread_data_t *data = (hook_thread_data_t *) HeapAlloc(GetProcessHeap(), 0, num_threads * sizeof(hook_thread_data_t));
     if (! data) {
-    log_event(EVENTLOG_ERROR_TYPE, NSSM_EVENT_OUT_OF_MEMORY, _T("data"), _T("await_hook_threads()"), 0);
+    log_event(EVENTLOG_ERROR_TYPE, TSSM_EVENT_OUT_OF_MEMORY, _T("data"), _T("await_hook_threads()"), 0);
       HeapFree(GetProcessHeap(), 0, retain);
       return;
     }
@@ -214,21 +214,21 @@ void await_hook_threads(hook_thread_t *hook_threads, SERVICE_STATUS_HANDLE statu
 
 /*
    Returns:
-   NSSM_HOOK_STATUS_SUCCESS  if the hook ran successfully.
-   NSSM_HOOK_STATUS_NOTFOUND if no hook was found.
-   NSSM_HOOK_STATUS_ABORT    if the hook failed and we should cancel service start.
-   NSSM_HOOK_STATUS_ERROR    on error.
-   NSSM_HOOK_STATUS_NOTRUN   if the hook didn't run.
-   NSSM_HOOK_STATUS_TIMEOUT  if the hook timed out.
-   NSSM_HOOK_STATUS_FAILED   if the hook failed.
+   TSSM_HOOK_STATUS_SUCCESS  if the hook ran successfully.
+   TSSM_HOOK_STATUS_NOTFOUND if no hook was found.
+   TSSM_HOOK_STATUS_ABORT    if the hook failed and we should cancel service start.
+   TSSM_HOOK_STATUS_ERROR    on error.
+   TSSM_HOOK_STATUS_NOTRUN   if the hook didn't run.
+   TSSM_HOOK_STATUS_TIMEOUT  if the hook timed out.
+   TSSM_HOOK_STATUS_FAILED   if the hook failed.
 */
-int nssm_hook(hook_thread_t *hook_threads, nssm_service_t *service, TCHAR *hook_event, TCHAR *hook_action, unsigned long *hook_control, unsigned long deadline, bool async) {
+int tssm_hook(hook_thread_t *hook_threads, tssm_service_t *service, TCHAR *hook_event, TCHAR *hook_action, unsigned long *hook_control, unsigned long deadline, bool async) {
   int ret = 0;
 
   hook_t *hook = (hook_t *) HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(hook_t));
   if (! hook) {
-    log_event(EVENTLOG_ERROR_TYPE, NSSM_EVENT_OUT_OF_MEMORY, _T("hook"), _T("nssm_hook()"), 0);
-    return NSSM_HOOK_STATUS_ERROR;
+    log_event(EVENTLOG_ERROR_TYPE, TSSM_EVENT_OUT_OF_MEMORY, _T("hook"), _T("tssm_hook()"), 0);
+    return TSSM_HOOK_STATUS_ERROR;
   }
 
   FILETIME now;
@@ -241,96 +241,96 @@ int nssm_hook(hook_thread_t *hook_threads, nssm_service_t *service, TCHAR *hook_
 
   /* ABI version. */
   TCHAR number[16];
-  _sntprintf_s(number, _countof(number), _TRUNCATE, _T("%lu"), NSSM_HOOK_VERSION);
-  SetEnvironmentVariable(NSSM_HOOK_ENV_VERSION, number);
+  _sntprintf_s(number, _countof(number), _TRUNCATE, _T("%lu"), TSSM_HOOK_VERSION);
+  SetEnvironmentVariable(TSSM_HOOK_ENV_VERSION, number);
 
   /* Event triggering this action. */
-  SetEnvironmentVariable(NSSM_HOOK_ENV_EVENT, hook_event);
+  SetEnvironmentVariable(TSSM_HOOK_ENV_EVENT, hook_event);
 
   /* Hook action. */
-  SetEnvironmentVariable(NSSM_HOOK_ENV_ACTION, hook_action);
+  SetEnvironmentVariable(TSSM_HOOK_ENV_ACTION, hook_action);
 
   /* Control triggering this action.  May be empty. */
-  if (hook_control) SetEnvironmentVariable(NSSM_HOOK_ENV_TRIGGER, service_control_text(*hook_control));
-  else SetEnvironmentVariable(NSSM_HOOK_ENV_TRIGGER, _T(""));
+  if (hook_control) SetEnvironmentVariable(TSSM_HOOK_ENV_TRIGGER, service_control_text(*hook_control));
+  else SetEnvironmentVariable(TSSM_HOOK_ENV_TRIGGER, _T(""));
 
   /* Last control handled. */
-  SetEnvironmentVariable(NSSM_HOOK_ENV_LAST_CONTROL, service_control_text(service->last_control));
+  SetEnvironmentVariable(TSSM_HOOK_ENV_LAST_CONTROL, service_control_text(service->last_control));
 
-  /* Path to NSSM, unquoted for the environment. */
-  SetEnvironmentVariable(NSSM_HOOK_ENV_IMAGE_PATH, nssm_unquoted_imagepath());
+  /* Path to TSSM, unquoted for the environment. */
+  SetEnvironmentVariable(TSSM_HOOK_ENV_IMAGE_PATH, tssm_unquoted_imagepath());
 
-  /* NSSM version. */
-  SetEnvironmentVariable(NSSM_HOOK_ENV_NSSM_CONFIGURATION, NSSM_CONFIGURATION);
-  SetEnvironmentVariable(NSSM_HOOK_ENV_NSSM_VERSION, NSSM_VERSION);
-  SetEnvironmentVariable(NSSM_HOOK_ENV_BUILD_DATE, NSSM_DATE);
+  /* TSSM version. */
+  SetEnvironmentVariable(TSSM_HOOK_ENV_TSSM_CONFIGURATION, TSSM_CONFIGURATION);
+  SetEnvironmentVariable(TSSM_HOOK_ENV_TSSM_VERSION, TSSM_VERSION);
+  SetEnvironmentVariable(TSSM_HOOK_ENV_BUILD_DATE, TSSM_DATE);
 
-  /* NSSM PID. */
+  /* TSSM PID. */
   _sntprintf_s(number, _countof(number), _TRUNCATE, _T("%lu"), GetCurrentProcessId());
-  SetEnvironmentVariable(NSSM_HOOK_ENV_PID, number);
+  SetEnvironmentVariable(TSSM_HOOK_ENV_PID, number);
 
-  /* NSSM runtime. */
-  set_hook_runtime(NSSM_HOOK_ENV_RUNTIME, &service->nssm_creation_time, &now);
+  /* TSSM runtime. */
+  set_hook_runtime(TSSM_HOOK_ENV_RUNTIME, &service->tssm_creation_time, &now);
 
   /* Application PID. */
   if (service->pid) {
     _sntprintf_s(number, _countof(number), _TRUNCATE, _T("%lu"), service->pid);
-    SetEnvironmentVariable(NSSM_HOOK_ENV_APPLICATION_PID, number);
+    SetEnvironmentVariable(TSSM_HOOK_ENV_APPLICATION_PID, number);
     /* Application runtime. */
-    set_hook_runtime(NSSM_HOOK_ENV_APPLICATION_RUNTIME, &service->creation_time, &now);
+    set_hook_runtime(TSSM_HOOK_ENV_APPLICATION_RUNTIME, &service->creation_time, &now);
     /* Exit code. */
-    SetEnvironmentVariable(NSSM_HOOK_ENV_EXITCODE, _T(""));
+    SetEnvironmentVariable(TSSM_HOOK_ENV_EXITCODE, _T(""));
   }
   else {
-    SetEnvironmentVariable(NSSM_HOOK_ENV_APPLICATION_PID, _T(""));
-    if (str_equiv(hook_event, NSSM_HOOK_EVENT_START) && str_equiv(hook_action, NSSM_HOOK_ACTION_PRE)) {
-      SetEnvironmentVariable(NSSM_HOOK_ENV_APPLICATION_RUNTIME, _T(""));
-      SetEnvironmentVariable(NSSM_HOOK_ENV_EXITCODE, _T(""));
+    SetEnvironmentVariable(TSSM_HOOK_ENV_APPLICATION_PID, _T(""));
+    if (str_equiv(hook_event, TSSM_HOOK_EVENT_START) && str_equiv(hook_action, TSSM_HOOK_ACTION_PRE)) {
+      SetEnvironmentVariable(TSSM_HOOK_ENV_APPLICATION_RUNTIME, _T(""));
+      SetEnvironmentVariable(TSSM_HOOK_ENV_EXITCODE, _T(""));
     }
     else {
-      set_hook_runtime(NSSM_HOOK_ENV_APPLICATION_RUNTIME, &service->creation_time, &service->exit_time);
+      set_hook_runtime(TSSM_HOOK_ENV_APPLICATION_RUNTIME, &service->creation_time, &service->exit_time);
       /* Exit code. */
       _sntprintf_s(number, _countof(number), _TRUNCATE, _T("%lu"), service->exitcode);
-      SetEnvironmentVariable(NSSM_HOOK_ENV_EXITCODE, number);
+      SetEnvironmentVariable(TSSM_HOOK_ENV_EXITCODE, number);
     }
   }
 
   /* Deadline for this script. */
   _sntprintf_s(number, _countof(number), _TRUNCATE, _T("%lu"), deadline);
-  SetEnvironmentVariable(NSSM_HOOK_ENV_DEADLINE, number);
+  SetEnvironmentVariable(TSSM_HOOK_ENV_DEADLINE, number);
 
   /* Service name. */
-  SetEnvironmentVariable(NSSM_HOOK_ENV_SERVICE_NAME, service->name);
-  SetEnvironmentVariable(NSSM_HOOK_ENV_SERVICE_DISPLAYNAME, service->displayname);
+  SetEnvironmentVariable(TSSM_HOOK_ENV_SERVICE_NAME, service->name);
+  SetEnvironmentVariable(TSSM_HOOK_ENV_SERVICE_DISPLAYNAME, service->displayname);
 
   /* Times the service was asked to start. */
   _sntprintf_s(number, _countof(number), _TRUNCATE, _T("%lu"), service->start_requested_count);
-  SetEnvironmentVariable(NSSM_HOOK_ENV_START_REQUESTED_COUNT, number);
+  SetEnvironmentVariable(TSSM_HOOK_ENV_START_REQUESTED_COUNT, number);
 
   /* Times the service actually did start. */
   _sntprintf_s(number, _countof(number), _TRUNCATE, _T("%lu"), service->start_count);
-  SetEnvironmentVariable(NSSM_HOOK_ENV_START_COUNT, number);
+  SetEnvironmentVariable(TSSM_HOOK_ENV_START_COUNT, number);
 
   /* Times the service exited. */
   _sntprintf_s(number, _countof(number), _TRUNCATE, _T("%lu"), service->exit_count);
-  SetEnvironmentVariable(NSSM_HOOK_ENV_EXIT_COUNT, number);
+  SetEnvironmentVariable(TSSM_HOOK_ENV_EXIT_COUNT, number);
 
   /* Throttled count. */
   _sntprintf_s(number, _countof(number), _TRUNCATE, _T("%lu"), service->throttle);
-  SetEnvironmentVariable(NSSM_HOOK_ENV_THROTTLE_COUNT, number);
+  SetEnvironmentVariable(TSSM_HOOK_ENV_THROTTLE_COUNT, number);
 
   /* Command line. */
   TCHAR app[CMD_LENGTH];
   _sntprintf_s(app, _countof(app), _TRUNCATE, _T("\"%s\" %s"), service->exe, service->flags);
-  SetEnvironmentVariable(NSSM_HOOK_ENV_COMMAND_LINE, app);
+  SetEnvironmentVariable(TSSM_HOOK_ENV_COMMAND_LINE, app);
 
   TCHAR cmd[CMD_LENGTH];
   if (get_hook(service->name, hook_event, hook_action, cmd, sizeof(cmd))) {
-    log_event(EVENTLOG_ERROR_TYPE, NSSM_EVENT_GET_HOOK_FAILED, hook_event, hook_action, service->name, 0);
+    log_event(EVENTLOG_ERROR_TYPE, TSSM_EVENT_GET_HOOK_FAILED, hook_event, hook_action, service->name, 0);
     unset_service_environment(service);
     LeaveCriticalSection(&service->hook_section);
     HeapFree(GetProcessHeap(), 0, hook);
-    return NSSM_HOOK_STATUS_ERROR;
+    return TSSM_HOOK_STATUS_ERROR;
   }
 
   /* No hook. */
@@ -338,7 +338,7 @@ int nssm_hook(hook_thread_t *hook_threads, nssm_service_t *service, TCHAR *hook_
     unset_service_environment(service);
     LeaveCriticalSection(&service->hook_section);
     HeapFree(GetProcessHeap(), 0, hook);
-    return NSSM_HOOK_STATUS_NOTFOUND;
+    return TSSM_HOOK_STATUS_NOTFOUND;
   }
 
   /* Run the command. */
@@ -354,7 +354,7 @@ int nssm_hook(hook_thread_t *hook_threads, nssm_service_t *service, TCHAR *hook_
 #ifdef UNICODE
   flags |= CREATE_UNICODE_ENVIRONMENT;
 #endif
-  ret = NSSM_HOOK_STATUS_NOTRUN;
+  ret = TSSM_HOOK_STATUS_NOTRUN;
   if (CreateProcess(0, cmd, 0, 0, inherit_handles, flags, 0, service->dir, &si, &pi)) {
     close_output_handles(&si);
     hook->name = (TCHAR *) HeapAlloc(GetProcessHeap(), 0, HOOK_NAME_LENGTH * sizeof(TCHAR));
@@ -373,7 +373,7 @@ int nssm_hook(hook_thread_t *hook_threads, nssm_service_t *service, TCHAR *hook_
         add_thread_handle(hook_threads, thread_handle, hook->name);
       }
       else {
-        await_single_handle(service->status_handle, &service->status, thread_handle, hook->name, _T(__FUNCTION__), deadline + NSSM_SERVICE_STATUS_DEADLINE);
+        await_single_handle(service->status_handle, &service->status, thread_handle, hook->name, _T(__FUNCTION__), deadline + TSSM_SERVICE_STATUS_DEADLINE);
         unsigned long exitcode;
         GetExitCodeThread(thread_handle, &exitcode);
         ret = (int) exitcode;
@@ -381,14 +381,14 @@ int nssm_hook(hook_thread_t *hook_threads, nssm_service_t *service, TCHAR *hook_
       }
     }
     else {
-      log_event(EVENTLOG_ERROR_TYPE, NSSM_EVENT_CREATETHREAD_FAILED, error_string(GetLastError()), 0);
+      log_event(EVENTLOG_ERROR_TYPE, TSSM_EVENT_CREATETHREAD_FAILED, error_string(GetLastError()), 0);
       await_hook(hook);
       if (hook->name) HeapFree(GetProcessHeap(), 0, hook->name);
       HeapFree(GetProcessHeap(), 0, hook);
     }
   }
   else {
-    log_event(EVENTLOG_ERROR_TYPE, NSSM_EVENT_HOOK_CREATEPROCESS_FAILED, hook_event, hook_action, service->name, cmd, error_string(GetLastError()), 0);
+    log_event(EVENTLOG_ERROR_TYPE, TSSM_EVENT_HOOK_CREATEPROCESS_FAILED, hook_event, hook_action, service->name, cmd, error_string(GetLastError()), 0);
     HeapFree(GetProcessHeap(), 0, hook);
     close_output_handles(&si);
   }
@@ -401,10 +401,10 @@ int nssm_hook(hook_thread_t *hook_threads, nssm_service_t *service, TCHAR *hook_
   return ret;
 }
 
-int nssm_hook(hook_thread_t *hook_threads, nssm_service_t *service, TCHAR *hook_event, TCHAR *hook_action, unsigned long *hook_control, unsigned long deadline) {
-  return nssm_hook(hook_threads, service, hook_event, hook_action, hook_control, deadline, true);
+int tssm_hook(hook_thread_t *hook_threads, tssm_service_t *service, TCHAR *hook_event, TCHAR *hook_action, unsigned long *hook_control, unsigned long deadline) {
+  return tssm_hook(hook_threads, service, hook_event, hook_action, hook_control, deadline, true);
 }
 
-int nssm_hook(hook_thread_t *hook_threads, nssm_service_t *service, TCHAR *hook_event, TCHAR *hook_action, unsigned long *hook_control) {
-  return nssm_hook(hook_threads, service, hook_event, hook_action, hook_control, NSSM_HOOK_DEADLINE);
+int tssm_hook(hook_thread_t *hook_threads, tssm_service_t *service, TCHAR *hook_event, TCHAR *hook_action, unsigned long *hook_control) {
+  return tssm_hook(hook_threads, service, hook_event, hook_action, hook_control, TSSM_HOOK_DEADLINE);
 }

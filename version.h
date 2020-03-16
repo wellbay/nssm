@@ -1,5 +1,5 @@
-#define NSSM_VERSION _T("2.23-107-g81d2ba8")
-#define NSSM_VERSIONINFO 2,23,107,0
-#define NSSM_DATE _T("2020/01/19")
-#define NSSM_FILEFLAGS VS_FF_PRERELEASE
-#define NSSM_COPYRIGHT _T("Joelly Wong,TechSure 2020")
+#define TSSM_VERSION _T("2.30-1-g845c362")
+#define TSSM_VERSIONINFO 2,30,1,0
+#define TSSM_DATE _T("2020/03/16")
+#define TSSM_FILEFLAGS VS_FF_PRERELEASE
+#define TSSM_COPYRIGHT _T("Joelly Wong,TechSure 2020")

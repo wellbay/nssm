@@ -17,17 +17,17 @@
 
 #define ACTION_LEN 16
 
-#define NSSM_KERNEL_DRIVER _T("SERVICE_KERNEL_DRIVER")
-#define NSSM_FILE_SYSTEM_DRIVER _T("SERVICE_FILE_SYSTEM_DRIVER")
-#define NSSM_WIN32_OWN_PROCESS _T("SERVICE_WIN32_OWN_PROCESS")
-#define NSSM_WIN32_SHARE_PROCESS _T("SERVICE_WIN32_SHARE_PROCESS")
-#define NSSM_INTERACTIVE_PROCESS _T("SERVICE_INTERACTIVE_PROCESS")
-#define NSSM_SHARE_INTERACTIVE_PROCESS NSSM_WIN32_SHARE_PROCESS _T("|") NSSM_INTERACTIVE_PROCESS
-#define NSSM_UNKNOWN _T("?")
+#define TSSM_KERNEL_DRIVER _T("SERVICE_KERNEL_DRIVER")
+#define TSSM_FILE_SYSTEM_DRIVER _T("SERVICE_FILE_SYSTEM_DRIVER")
+#define TSSM_WIN32_OWN_PROCESS _T("SERVICE_WIN32_OWN_PROCESS")
+#define TSSM_WIN32_SHARE_PROCESS _T("SERVICE_WIN32_SHARE_PROCESS")
+#define TSSM_INTERACTIVE_PROCESS _T("SERVICE_INTERACTIVE_PROCESS")
+#define TSSM_SHARE_INTERACTIVE_PROCESS TSSM_WIN32_SHARE_PROCESS _T("|") TSSM_INTERACTIVE_PROCESS
+#define TSSM_UNKNOWN _T("?")
 
-#define NSSM_ROTATE_OFFLINE 0
-#define NSSM_ROTATE_ONLINE 1
-#define NSSM_ROTATE_ONLINE_ASAP 2
+#define TSSM_ROTATE_OFFLINE 0
+#define TSSM_ROTATE_ONLINE 1
+#define TSSM_ROTATE_ONLINE_ASAP 2
 
 typedef struct {
   bool native;
@@ -111,7 +111,7 @@ typedef struct {
   CONDITION_VARIABLE throttle_condition;
   HANDLE throttle_timer;
   LARGE_INTEGER throttle_duetime;
-  FILETIME nssm_creation_time;
+  FILETIME tssm_creation_time;
   FILETIME creation_time;
   FILETIME exit_time;
   TCHAR *initial_env;
@@ -119,7 +119,7 @@ typedef struct {
   unsigned long start_requested_count;
   unsigned long start_count;
   unsigned long exit_count;
-} nssm_service_t;
+} tssm_service_t;
 
 void WINAPI service_main(unsigned long, TCHAR **);
 TCHAR *service_control_text(unsigned long);
@@ -133,9 +133,9 @@ unsigned long priority_mask();
 int priority_constant_to_index(unsigned long);
 unsigned long priority_index_to_constant(int);
 
-nssm_service_t *alloc_nssm_service();
-void set_nssm_service_defaults(nssm_service_t *);
-void cleanup_nssm_service(nssm_service_t *);
+tssm_service_t *alloc_tssm_service();
+void set_tssm_service_defaults(tssm_service_t *);
+void cleanup_tssm_service(tssm_service_t *);
 SC_HANDLE open_service_manager(unsigned long);
 SC_HANDLE open_service(SC_HANDLE, TCHAR *, unsigned long, TCHAR *, unsigned long);
 QUERY_SERVICE_CONFIG *query_service_config(const TCHAR *, SC_HANDLE);
@@ -148,24 +148,24 @@ int set_service_description(const TCHAR *, SC_HANDLE, TCHAR *);
 int get_service_description(const TCHAR *, SC_HANDLE, unsigned long, TCHAR *);
 int get_service_startup(const TCHAR *, SC_HANDLE, const QUERY_SERVICE_CONFIG *, unsigned long *);
 int get_service_username(const TCHAR *, const QUERY_SERVICE_CONFIG *, TCHAR **, size_t *);
-void set_service_environment(nssm_service_t *);
-void unset_service_environment(nssm_service_t *);
+void set_service_environment(tssm_service_t *);
+void unset_service_environment(tssm_service_t *);
 int pre_install_service(int, TCHAR **);
 int pre_remove_service(int, TCHAR **);
 int pre_edit_service(int, TCHAR **);
-int install_service(nssm_service_t *);
-int remove_service(nssm_service_t *);
-int edit_service(nssm_service_t *, bool);
+int install_service(tssm_service_t *);
+int remove_service(tssm_service_t *);
+int edit_service(tssm_service_t *, bool);
 int control_service(unsigned long, int, TCHAR **, bool);
 int control_service(unsigned long, int, TCHAR **);
-void set_service_recovery(nssm_service_t *);
-int monitor_service(nssm_service_t *);
-int start_service(nssm_service_t *);
-int stop_service(nssm_service_t *, unsigned long, bool, bool);
+void set_service_recovery(tssm_service_t *);
+int monitor_service(tssm_service_t *);
+int start_service(tssm_service_t *);
+int stop_service(tssm_service_t *, unsigned long, bool, bool);
 void CALLBACK end_service(void *, unsigned char);
-void throttle_restart(nssm_service_t *);
+void throttle_restart(tssm_service_t *);
 int await_single_handle(SERVICE_STATUS_HANDLE, SERVICE_STATUS *, HANDLE, TCHAR *, TCHAR *, unsigned long);
-int list_nssm_services(int, TCHAR **);
+int list_tssm_services(int, TCHAR **);
 int service_process_tree(int, TCHAR **);
 
 #endif

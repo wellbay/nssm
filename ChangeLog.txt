@@ -2,25 +2,25 @@ Changes since 2.24
 ------------------
   * Allow skipping kill_process_tree().
 
-  * NSSM can now sleep a configurable amount of time after
+  * TSSM can now sleep a configurable amount of time after
     rotating output files.
 
-  * NSSM can now rotate log files by calling CopyFile()
+  * TSSM can now rotate log files by calling CopyFile()
     followed by SetEndOfFile(), allowing it to rotate files
     which other processes hold open.
 
-  * NSSM now sets the service environment before querying
+  * TSSM now sets the service environment before querying
     parameters from the registry, so paths and arguments
     can reference environment configured in AppEnvironment
     or AppEnvironmentExtra.
 
 Changes since 2.23
 ------------------
-  * NSSM once again calls TerminateProcess() correctly.
+  * TSSM once again calls TerminateProcess() correctly.
 
 Changes since 2.22
 ------------------
-  * NSSM no longer clutters the event log with "The specified
+  * TSSM no longer clutters the event log with "The specified
     procedure could not be found" on legacy Windows releases.
 
   * Fixed failure to set a local username to run the service.
@@ -30,19 +30,19 @@ Changes since 2.21
   * Existing services can now be managed using the GUI
     or on the command line.
 
-  * NSSM can now set the priority class and processor
+  * TSSM can now set the priority class and processor
     affinity of the managed application.
 
-  * NSSM can now apply an unconditional delay before
+  * TSSM can now apply an unconditional delay before
     restarting the application.
 
-  * NSSM can now optionally rotate existing files when
+  * TSSM can now optionally rotate existing files when
     redirecting I/O.
 
   * Unqualified path names are now relative to the
     application startup directory when redirecting I/O.
 
-  * NSSM can now set the service display name, description,
+  * TSSM can now set the service display name, description,
     startup type and log on details.
 
   * All services now receive a standard console window,
@@ -76,7 +76,7 @@ Changes since 2.17
 
 Changes since 2.16
 ------------------
-  * NSSM can now redirect the service's I/O streams to any path
+  * TSSM can now redirect the service's I/O streams to any path
     capable of being opened by CreateFile().
 
   * Allow building on Visual Studio Express.
@@ -88,12 +88,12 @@ Changes since 2.16
 
 Changes since 2.15
 ------------------
-  * Fixed case where NSSM could kill unrelated processes when
+  * Fixed case where TSSM could kill unrelated processes when
     shutting down.
 
 Changes since 2.14
 ------------------
-  * NSSM is now translated into Italian.
+  * TSSM is now translated into Italian.
 
   * Fixed GUI not allowing paths longer than 256 characters.
 
@@ -107,7 +107,7 @@ Changes since 2.12
 
 Changes since 2.11
 ------------------
-  * NSSM is now translated into French.
+  * TSSM is now translated into French.
 
   * Really ensure systems recovery actions can happen.
 
@@ -136,7 +136,7 @@ Changes since 2.8
 Changes since 2.7
 -----------------
   * Read Application, AppDirectory and AppParameters before each restart so
-    a change to any one doesn't require restarting NSSM itself.
+    a change to any one doesn't require restarting TSSM itself.
 
   * Fixed messages not being sent to the event log correctly in some
     cases.
@@ -246,7 +246,7 @@ Changes since 2.1
     falling back to the unnamed value if no such code is listed.  Parse the
     (string) value of this entry as follows:
 
-        Restart: Start the application again (NSSM default).
+        Restart: Start the application again (TSSM default).
         Ignore:  Do nothing (srvany default).
         Exit:    Stop the service.
 

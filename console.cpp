@@ -1,4 +1,4 @@
-#include "nssm.h"
+#include "tssm.h"
 
 /* See if we were launched from a console window. */
 bool check_console() {
@@ -21,7 +21,7 @@ bool check_console() {
   return false;
 }
 
-void alloc_console(nssm_service_t *service) {
+void alloc_console(tssm_service_t *service) {
   if (service->no_console) return;
 
   AllocConsole();

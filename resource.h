@@ -1,9 +1,9 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Developer Studio generated include file.
-// Used by nssm.rc
+// Used by tssm.rc
 //
 #define IDC_STATIC (-1)
-#define IDI_NSSM                        101
+#define IDI_TSSM                        101
 #define IDD_INSTALL                     102
 #define IDD_REMOVE                      103
 #define IDD_EDIT                        104

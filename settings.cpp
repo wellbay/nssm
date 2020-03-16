@@ -1,10 +1,10 @@
-#include "nssm.h"
+#include "tssm.h"
 /* XXX: (value && value->string) is probably bogus because value is probably never null */
 
 /* Affinity. */
-#define NSSM_AFFINITY_ALL _T("All")
+#define TSSM_AFFINITY_ALL _T("All")
 /* Default value. */
-#define NSSM_DEFAULT_STRING _T("Default")
+#define TSSM_DEFAULT_STRING _T("Default")
 
 extern const TCHAR *exit_action_strings[];
 extern const TCHAR *startup_strings[];
@@ -14,7 +14,7 @@ extern const TCHAR *hook_action_strings[];
 
 /* Does the parameter refer to the default value of the setting? */
 static inline int is_default(const TCHAR *value) {
-  return (str_equiv(value, NSSM_DEFAULT_STRING) || str_equiv(value, _T("*")) || ! value[0]);
+  return (str_equiv(value, TSSM_DEFAULT_STRING) || str_equiv(value, _T("*")) || ! value[0]);
 }
 
 /* What type of parameter is it parameter? */
@@ -34,20 +34,20 @@ static int value_from_string(const TCHAR *name, value_t *value, const TCHAR *str
 
   value->string = (TCHAR *) HeapAlloc(GetProcessHeap(), 0, len * sizeof(TCHAR));
   if (! value->string) {
-    print_message(stderr, NSSM_MESSAGE_OUT_OF_MEMORY, name, _T("value_from_string()"));
+    print_message(stderr, TSSM_MESSAGE_OUT_OF_MEMORY, name, _T("value_from_string()"));
     return -1;
   }
 
   if (_sntprintf_s(value->string, len, _TRUNCATE, _T("%s"), string) < 0) {
     HeapFree(GetProcessHeap(), 0, value->string);
-    print_message(stderr, NSSM_MESSAGE_OUT_OF_MEMORY, name, _T("value_from_string()"));
+    print_message(stderr, TSSM_MESSAGE_OUT_OF_MEMORY, name, _T("value_from_string()"));
     return -1;
   }
 
   return 1;
 }
 
-/* Functions to manage NSSM-specific settings in the registry. */
+/* Functions to manage TSSM-specific settings in the registry. */
 static int setting_set_number(const TCHAR *service_name, void *param, const TCHAR *name, void *default_value, value_t *value, const TCHAR *additional) {
   HKEY key = (HKEY) param;
   if (! key) return -1;
@@ -59,7 +59,7 @@ static int setting_set_number(const TCHAR *service_name, void *param, const TCHA
   if (! value || ! value->string) {
     error = RegDeleteValue(key, name);
     if (error == ERROR_SUCCESS || error == ERROR_FILE_NOT_FOUND) return 0;
-    print_message(stderr, NSSM_MESSAGE_REGDELETEVALUE_FAILED, name, service_name, error_string(error));
+    print_message(stderr, TSSM_MESSAGE_REGDELETEVALUE_FAILED, name, service_name, error_string(error));
     return -1;
   }
   if (str_number(value->string, &number)) return -1;
@@ -67,7 +67,7 @@ static int setting_set_number(const TCHAR *service_name, void *param, const TCHA
   if (default_value && number == PtrToUlong(default_value)) {
     error = RegDeleteValue(key, name);
     if (error == ERROR_SUCCESS || error == ERROR_FILE_NOT_FOUND) return 0;
-    print_message(stderr, NSSM_MESSAGE_REGDELETEVALUE_FAILED, name, service_name, error_string(error));
+    print_message(stderr, TSSM_MESSAGE_REGDELETEVALUE_FAILED, name, service_name, error_string(error));
     return -1;
   }
 
@@ -93,14 +93,14 @@ static int setting_set_string(const TCHAR *service_name, void *param, const TCHA
     else {
       error = RegDeleteValue(key, name);
       if (error == ERROR_SUCCESS || error == ERROR_FILE_NOT_FOUND) return 0;
-      print_message(stderr, NSSM_MESSAGE_REGDELETEVALUE_FAILED, name, service_name, error_string(error));
+      print_message(stderr, TSSM_MESSAGE_REGDELETEVALUE_FAILED, name, service_name, error_string(error));
       return -1;
     }
   }
   if (default_value && _tcslen((TCHAR *) default_value) && str_equiv(value->string, (TCHAR *) default_value)) {
     error = RegDeleteValue(key, name);
     if (error == ERROR_SUCCESS || error == ERROR_FILE_NOT_FOUND) return 0;
-    print_message(stderr, NSSM_MESSAGE_REGDELETEVALUE_FAILED, name, service_name, error_string(error));
+    print_message(stderr, TSSM_MESSAGE_REGDELETEVALUE_FAILED, name, service_name, error_string(error));
     return -1;
   }
 
@@ -126,7 +126,7 @@ static int setting_dump_string(const TCHAR *service_name, void *param, const TCH
   TCHAR quoted_service_name[SERVICE_NAME_LENGTH * 2];
   TCHAR quoted_value[VALUE_LENGTH * 2];
   TCHAR quoted_additional[VALUE_LENGTH * 2];
-  TCHAR quoted_nssm[EXE_LENGTH * 2];
+  TCHAR quoted_tssm[EXE_LENGTH * 2];
 
   if (quote(service_name, quoted_service_name, _countof(quoted_service_name))) return 1;
 
@@ -148,9 +148,9 @@ static int setting_dump_string(const TCHAR *service_name, void *param, const TCH
   else if (is_numeric_type(type)) _sntprintf_s(quoted_value, _countof(quoted_value), _TRUNCATE, _T("%lu"), value->numeric);
   else return 2;
 
-  if (quote(nssm_exe(), quoted_nssm, _countof(quoted_nssm))) return 3;
-  if (_tcslen(quoted_additional)) _tprintf(_T("%s set %s %s %s %s\n"), quoted_nssm, quoted_service_name, name, quoted_additional, quoted_value);
-  else _tprintf(_T("%s set %s %s %s\n"), quoted_nssm, quoted_service_name, name, quoted_value);
+  if (quote(tssm_exe(), quoted_tssm, _countof(quoted_tssm))) return 3;
+  if (_tcslen(quoted_additional)) _tprintf(_T("%s set %s %s %s %s\n"), quoted_tssm, quoted_service_name, name, quoted_additional, quoted_value);
+  else _tprintf(_T("%s set %s %s %s\n"), quoted_tssm, quoted_service_name, name, quoted_value);
   return 0;
 }
 
@@ -182,7 +182,7 @@ static int setting_set_exit_action(const TCHAR *service_name, void *param, const
       error = RegDeleteValue(key, code);
       RegCloseKey(key);
       if (error == ERROR_SUCCESS || error == ERROR_FILE_NOT_FOUND) return 0;
-      print_message(stderr, NSSM_MESSAGE_REGDELETEVALUE_FAILED, code, service_name, error_string(error));
+      print_message(stderr, TSSM_MESSAGE_REGDELETEVALUE_FAILED, code, service_name, error_string(error));
       return -1;
     }
     else {
@@ -197,7 +197,7 @@ static int setting_set_exit_action(const TCHAR *service_name, void *param, const
     if (! _tcsnicmp((const TCHAR *) action_string, exit_action_strings[i], ACTION_LEN)) {
       if (default_value && str_equiv(action_string, (TCHAR *) default_value)) ret = 0;
       if (RegSetValueEx(key, code, 0, REG_SZ, (const unsigned char *) exit_action_strings[i], (unsigned long) (_tcslen(action_string) + 1) * sizeof(TCHAR)) != ERROR_SUCCESS) {
-        print_message(stderr, NSSM_MESSAGE_SETVALUE_FAILED, code, service_name, error_string(GetLastError()));
+        print_message(stderr, TSSM_MESSAGE_SETVALUE_FAILED, code, service_name, error_string(GetLastError()));
         RegCloseKey(key);
         return -1;
       }
@@ -207,7 +207,7 @@ static int setting_set_exit_action(const TCHAR *service_name, void *param, const
     }
   }
 
-  print_message(stderr, NSSM_MESSAGE_INVALID_EXIT_ACTION, action_string);
+  print_message(stderr, TSSM_MESSAGE_INVALID_EXIT_ACTION, action_string);
   for (int i = 0; exit_action_strings[i]; i++) _ftprintf(stderr, _T("%s\n"), exit_action_strings[i]);
 
   return -1;
@@ -236,7 +236,7 @@ static int setting_get_exit_action(const TCHAR *service_name, void *param, const
 
 static int setting_dump_exit_action(const TCHAR *service_name, void *param, const TCHAR *name, void *default_value, value_t *value, const TCHAR *additional) {
   int errors = 0;
-  HKEY key = open_registry(service_name, NSSM_REG_EXIT, KEY_READ);
+  HKEY key = open_registry(service_name, TSSM_REG_EXIT, KEY_READ);
   if (! key) return -1;
 
   TCHAR code[16];
@@ -255,7 +255,7 @@ static int setting_dump_exit_action(const TCHAR *service_name, void *param, cons
     }
     if (! valid) continue;
 
-    TCHAR *additional = (code[i]) ? code : NSSM_DEFAULT_STRING;
+    TCHAR *additional = (code[i]) ? code : TSSM_DEFAULT_STRING;
 
     ret = setting_get_exit_action(service_name, 0, name, default_value, value, additional);
     if (ret == 1) {
@@ -281,7 +281,7 @@ static inline bool split_hook_name(const TCHAR *hook_name, TCHAR *hook_event, TC
     }
   }
 
-  print_message(stderr, NSSM_MESSAGE_INVALID_HOOK_NAME, hook_name);
+  print_message(stderr, TSSM_MESSAGE_INVALID_HOOK_NAME, hook_name);
   return false;
 }
 
@@ -352,9 +352,9 @@ static int setting_set_affinity(const TCHAR *service_name, void *param, const TC
     DWORD_PTR affinity;
     if (! GetProcessAffinityMask(GetCurrentProcess(), &affinity, (DWORD_PTR *) &system_affinity)) system_affinity = ~0;
 
-    if (is_default(value->string) || str_equiv(value->string, NSSM_AFFINITY_ALL)) mask = 0LL;
+    if (is_default(value->string) || str_equiv(value->string, TSSM_AFFINITY_ALL)) mask = 0LL;
     else if (affinity_string_to_mask(value->string, &mask)) {
-      print_message(stderr, NSSM_MESSAGE_BOGUS_AFFINITY_MASK, value->string, num_cpus() - 1);
+      print_message(stderr, TSSM_MESSAGE_BOGUS_AFFINITY_MASK, value->string, num_cpus() - 1);
       return -1;
     }
   }
@@ -363,7 +363,7 @@ static int setting_set_affinity(const TCHAR *service_name, void *param, const TC
   if (! mask) {
     error = RegDeleteValue(key, name);
     if (error == ERROR_SUCCESS || error == ERROR_FILE_NOT_FOUND) return 0;
-    print_message(stderr, NSSM_MESSAGE_REGDELETEVALUE_FAILED, name, service_name, error_string(error));
+    print_message(stderr, TSSM_MESSAGE_REGDELETEVALUE_FAILED, name, service_name, error_string(error));
     return -1;
   }
 
@@ -380,7 +380,7 @@ static int setting_set_affinity(const TCHAR *service_name, void *param, const TC
     if (! affinity_mask_to_string(system_affinity, &system)) {
       TCHAR *effective = 0;
       if (! affinity_mask_to_string(effective_affinity, &effective)) {
-        print_message(stderr, NSSM_MESSAGE_EFFECTIVE_AFFINITY_MASK, value->string, system, effective);
+        print_message(stderr, TSSM_MESSAGE_EFFECTIVE_AFFINITY_MASK, value->string, system, effective);
         HeapFree(GetProcessHeap(), 0, effective);
       }
       HeapFree(GetProcessHeap(), 0, system);
@@ -389,7 +389,7 @@ static int setting_set_affinity(const TCHAR *service_name, void *param, const TC
 
   if (RegSetValueEx(key, name, 0, REG_SZ, (const unsigned char *) canon, (unsigned long) (_tcslen(canon) + 1) * sizeof(TCHAR)) != ERROR_SUCCESS) {
     if (canon != value->string) HeapFree(GetProcessHeap(), 0, canon);
-    log_event(EVENTLOG_ERROR_TYPE, NSSM_EVENT_SETVALUE_FAILED, name, error_string(GetLastError()), 0);
+    log_event(EVENTLOG_ERROR_TYPE, TSSM_EVENT_SETVALUE_FAILED, name, error_string(GetLastError()), 0);
     return -1;
   }
 
@@ -407,7 +407,7 @@ static int setting_get_affinity(const TCHAR *service_name, void *param, const TC
 
   int ret = RegQueryValueEx(key, name, 0, &type, 0, &buflen);
   if (ret == ERROR_FILE_NOT_FOUND) {
-    if (value_from_string(name, value, NSSM_AFFINITY_ALL) == 1) return 0;
+    if (value_from_string(name, value, TSSM_AFFINITY_ALL) == 1) return 0;
     return -1;
   }
   if (ret != ERROR_SUCCESS) return -1;
@@ -416,7 +416,7 @@ static int setting_get_affinity(const TCHAR *service_name, void *param, const TC
 
   buffer = (TCHAR *) HeapAlloc(GetProcessHeap(), 0, buflen);
   if (! buffer) {
-    print_message(stderr, NSSM_MESSAGE_OUT_OF_MEMORY, _T("affinity"), _T("setting_get_affinity"));
+    print_message(stderr, TSSM_MESSAGE_OUT_OF_MEMORY, _T("affinity"), _T("setting_get_affinity"));
     return -1;
   }
 
@@ -427,7 +427,7 @@ static int setting_get_affinity(const TCHAR *service_name, void *param, const TC
 
   __int64 affinity;
   if (affinity_string_to_mask(buffer, &affinity)) {
-    print_message(stderr, NSSM_MESSAGE_BOGUS_AFFINITY_MASK, buffer, num_cpus() - 1);
+    print_message(stderr, TSSM_MESSAGE_BOGUS_AFFINITY_MASK, buffer, num_cpus() - 1);
     HeapFree(GetProcessHeap(), 0, buffer);
     return -1;
   }
@@ -490,7 +490,7 @@ static int setting_set_environment(const TCHAR *service_name, void *param, const
   if (! string || ! string[0]) {
     long error = RegDeleteValue(key, name);
     if (error == ERROR_SUCCESS || error == ERROR_FILE_NOT_FOUND) return 0;
-    print_message(stderr, NSSM_MESSAGE_REGDELETEVALUE_FAILED, name, service_name, error_string(error));
+    print_message(stderr, TSSM_MESSAGE_REGDELETEVALUE_FAILED, name, service_name, error_string(error));
     return -1;
   }
 
@@ -500,13 +500,13 @@ static int setting_set_environment(const TCHAR *service_name, void *param, const
 
   if (test_environment(unformatted)) {
     HeapFree(GetProcessHeap(), 0, unformatted);
-    print_message(stderr, NSSM_GUI_INVALID_ENVIRONMENT);
+    print_message(stderr, TSSM_GUI_INVALID_ENVIRONMENT);
     return -1;
   }
 
   if (RegSetValueEx(key, name, 0, REG_MULTI_SZ, (const unsigned char *) unformatted, (unsigned long) newlen * sizeof(TCHAR)) != ERROR_SUCCESS) {
     if (newlen) HeapFree(GetProcessHeap(), 0, unformatted);
-    log_event(EVENTLOG_ERROR_TYPE, NSSM_EVENT_SETVALUE_FAILED, NSSM_REG_ENV, error_string(GetLastError()), 0);
+    log_event(EVENTLOG_ERROR_TYPE, TSSM_EVENT_SETVALUE_FAILED, TSSM_REG_ENV, error_string(GetLastError()), 0);
     return -1;
   }
 
@@ -571,7 +571,7 @@ static int setting_dump_environment(const TCHAR *service_name, void *param, cons
     size_t len = _tcslen(s) + 2;
     value->string = (TCHAR *) HeapAlloc(GetProcessHeap(), 0, len * sizeof(TCHAR));
     if (! value->string) {
-      print_message(stderr, NSSM_MESSAGE_OUT_OF_MEMORY, _T("dump"), _T("setting_dump_environment"));
+      print_message(stderr, TSSM_MESSAGE_OUT_OF_MEMORY, _T("dump"), _T("setting_dump_environment"));
       break;
     }
 
@@ -602,7 +602,7 @@ static int setting_set_priority(const TCHAR *service_name, void *param, const TC
   else {
     error = RegDeleteValue(key, name);
     if (error == ERROR_SUCCESS || error == ERROR_FILE_NOT_FOUND) return 0;
-    print_message(stderr, NSSM_MESSAGE_REGDELETEVALUE_FAILED, name, service_name, error_string(error));
+    print_message(stderr, TSSM_MESSAGE_REGDELETEVALUE_FAILED, name, service_name, error_string(error));
     return -1;
   }
 
@@ -612,7 +612,7 @@ static int setting_set_priority(const TCHAR *service_name, void *param, const TC
     if (default_value && str_equiv(priority_string, (TCHAR *) default_value)) {
       error = RegDeleteValue(key, name);
       if (error == ERROR_SUCCESS || error == ERROR_FILE_NOT_FOUND) return 0;
-      print_message(stderr, NSSM_MESSAGE_REGDELETEVALUE_FAILED, name, service_name, error_string(error));
+      print_message(stderr, TSSM_MESSAGE_REGDELETEVALUE_FAILED, name, service_name, error_string(error));
       return -1;
     }
 
@@ -620,7 +620,7 @@ static int setting_set_priority(const TCHAR *service_name, void *param, const TC
     return 1;
   }
 
-  print_message(stderr, NSSM_MESSAGE_INVALID_PRIORITY, priority_string);
+  print_message(stderr, TSSM_MESSAGE_INVALID_PRIORITY, priority_string);
   for (i = 0; priority_strings[i]; i++) _ftprintf(stderr, _T("%s\n"), priority_strings[i]);
 
   return -1;
@@ -708,7 +708,7 @@ static int native_set_dependon(const TCHAR *service_name, SC_HANDLE service_hand
 
         canon = (TCHAR *) HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, canonlen * sizeof(TCHAR));
         if (! canon) {
-          print_message(stderr, NSSM_MESSAGE_OUT_OF_MEMORY, _T("canon"), _T("native_set_dependon"));
+          print_message(stderr, TSSM_MESSAGE_OUT_OF_MEMORY, _T("canon"), _T("native_set_dependon"));
           if (unformatted) HeapFree(GetProcessHeap(), 0, unformatted);
           return -1;
         }
@@ -748,7 +748,7 @@ static int native_set_dependongroup(const TCHAR *service_name, void *param, cons
 
   if (! value || ! value->string || ! value->string[0]) {
     if (! ChangeServiceConfig(service_handle, SERVICE_NO_CHANGE, SERVICE_NO_CHANGE, SERVICE_NO_CHANGE, 0, 0, 0, services_buffer, 0, 0, 0)) {
-      print_message(stderr, NSSM_MESSAGE_CHANGESERVICECONFIG_FAILED, error_string(GetLastError()));
+      print_message(stderr, TSSM_MESSAGE_CHANGESERVICECONFIG_FAILED, error_string(GetLastError()));
       if (services_buffer) HeapFree(GetProcessHeap(), 0, services_buffer);
       return -1;
     }
@@ -766,7 +766,7 @@ static int native_set_dependongroup(const TCHAR *service_name, void *param, cons
   if (services_buflen > 2) {
     dependencies = (TCHAR *) HeapAlloc(GetProcessHeap(), 0, (groups_buflen + services_buflen) * sizeof(TCHAR));
     if (! dependencies) {
-      print_message(stderr, NSSM_MESSAGE_OUT_OF_MEMORY, _T("dependencies"), _T("native_set_dependongroup"));
+      print_message(stderr, TSSM_MESSAGE_OUT_OF_MEMORY, _T("dependencies"), _T("native_set_dependongroup"));
       if (groups_buffer) HeapFree(GetProcessHeap(), 0, groups_buffer);
       if (services_buffer) HeapFree(GetProcessHeap(), 0, services_buffer);
       return -1;
@@ -828,7 +828,7 @@ static int setting_dump_dependon(const TCHAR *service_name, SC_HANDLE service_ha
     size_t len = _tcslen(s) + 2;
     value->string = (TCHAR *) HeapAlloc(GetProcessHeap(), 0, len * sizeof(TCHAR));
     if (! value->string) {
-      print_message(stderr, NSSM_MESSAGE_OUT_OF_MEMORY, _T("dump"), _T("setting_dump_dependon"));
+      print_message(stderr, TSSM_MESSAGE_OUT_OF_MEMORY, _T("dump"), _T("setting_dump_dependon"));
       break;
     }
 
@@ -863,7 +863,7 @@ static int native_set_dependonservice(const TCHAR *service_name, void *param, co
 
   if (! value || ! value->string || ! value->string[0]) {
     if (! ChangeServiceConfig(service_handle, SERVICE_NO_CHANGE, SERVICE_NO_CHANGE, SERVICE_NO_CHANGE, 0, 0, 0, groups_buffer, 0, 0, 0)) {
-      print_message(stderr, NSSM_MESSAGE_CHANGESERVICECONFIG_FAILED, error_string(GetLastError()));
+      print_message(stderr, TSSM_MESSAGE_CHANGESERVICECONFIG_FAILED, error_string(GetLastError()));
       if (groups_buffer) HeapFree(GetProcessHeap(), 0, groups_buffer);
       return -1;
     }
@@ -881,7 +881,7 @@ static int native_set_dependonservice(const TCHAR *service_name, void *param, co
   if (groups_buflen > 2) {
     dependencies = (TCHAR *) HeapAlloc(GetProcessHeap(), 0, (services_buflen + groups_buflen) * sizeof(TCHAR));
     if (! dependencies) {
-      print_message(stderr, NSSM_MESSAGE_OUT_OF_MEMORY, _T("dependencies"), _T("native_set_dependonservice"));
+      print_message(stderr, TSSM_MESSAGE_OUT_OF_MEMORY, _T("dependencies"), _T("native_set_dependonservice"));
       if (groups_buffer) HeapFree(GetProcessHeap(), 0, groups_buffer);
       if (services_buffer) HeapFree(GetProcessHeap(), 0, services_buffer);
       return -1;
@@ -969,7 +969,7 @@ int native_set_displayname(const TCHAR *service_name, void *param, const TCHAR *
   else displayname = (TCHAR *) service_name;
 
   if (! ChangeServiceConfig(service_handle, SERVICE_NO_CHANGE, SERVICE_NO_CHANGE, SERVICE_NO_CHANGE, 0, 0, 0, 0, 0, 0, displayname)) {
-    print_message(stderr, NSSM_MESSAGE_CHANGESERVICECONFIG_FAILED, error_string(GetLastError()));
+    print_message(stderr, TSSM_MESSAGE_CHANGESERVICECONFIG_FAILED, error_string(GetLastError()));
     return -1;
   }
 
@@ -1031,12 +1031,12 @@ int native_set_imagepath(const TCHAR *service_name, void *param, const TCHAR *na
 
   /* It makes no sense to try to reset the image path. */
   if (! value || ! value->string) {
-    print_message(stderr, NSSM_MESSAGE_NO_DEFAULT_VALUE, name);
+    print_message(stderr, TSSM_MESSAGE_NO_DEFAULT_VALUE, name);
     return -1;
   }
 
   if (! ChangeServiceConfig(service_handle, SERVICE_NO_CHANGE, SERVICE_NO_CHANGE, SERVICE_NO_CHANGE, value->string, 0, 0, 0, 0, 0, 0)) {
-    print_message(stderr, NSSM_MESSAGE_CHANGESERVICECONFIG_FAILED, error_string(GetLastError()));
+    print_message(stderr, TSSM_MESSAGE_CHANGESERVICECONFIG_FAILED, error_string(GetLastError()));
     return -1;
   }
 
@@ -1057,7 +1057,7 @@ int native_get_imagepath(const TCHAR *service_name, void *param, const TCHAR *na
 }
 
 int native_set_name(const TCHAR *service_name, void *param, const TCHAR *name, void *default_value, value_t *value, const TCHAR *additional) {
-  print_message(stderr, NSSM_MESSAGE_CANNOT_RENAME_SERVICE);
+  print_message(stderr, TSSM_MESSAGE_CANNOT_RENAME_SERVICE);
   return -1;
 }
 
@@ -1070,12 +1070,12 @@ int native_set_objectname(const TCHAR *service_name, void *param, const TCHAR *n
   if (! service_handle) return -1;
 
   /*
-    Logical syntax is: nssm set <service> ObjectName <username> <password>
+    Logical syntax is: tssm set <service> ObjectName <username> <password>
     That means the username is actually passed in the additional parameter.
   */
   bool localsystem = false;
   bool virtual_account = false;
-  TCHAR *username = NSSM_LOCALSYSTEM_ACCOUNT;
+  TCHAR *username = TSSM_LOCALSYSTEM_ACCOUNT;
   TCHAR *password = 0;
   if (additional) {
     username = (TCHAR *) additional;
@@ -1086,14 +1086,14 @@ int native_set_objectname(const TCHAR *service_name, void *param, const TCHAR *n
   const TCHAR *well_known = well_known_username(username);
   size_t passwordsize = 0;
   if (well_known) {
-    if (str_equiv(well_known, NSSM_LOCALSYSTEM_ACCOUNT)) localsystem = true;
+    if (str_equiv(well_known, TSSM_LOCALSYSTEM_ACCOUNT)) localsystem = true;
     username = (TCHAR *) well_known;
     password = _T("");
   }
   else if (is_virtual_account(service_name, username)) virtual_account = true;
   else if (! password) {
     /* We need a password if the account requires it. */
-    print_message(stderr, NSSM_MESSAGE_MISSING_PASSWORD, name);
+    print_message(stderr, TSSM_MESSAGE_MISSING_PASSWORD, name);
     return -1;
   }
   else passwordsize = _tcslen(password) * sizeof(TCHAR);
@@ -1117,14 +1117,14 @@ int native_set_objectname(const TCHAR *service_name, void *param, const TCHAR *n
   if (! well_known && ! virtual_account) {
     if (grant_logon_as_service(username)) {
       if (passwordsize) SecureZeroMemory(password, passwordsize);
-      print_message(stderr, NSSM_MESSAGE_GRANT_LOGON_AS_SERVICE_FAILED, username);
+      print_message(stderr, TSSM_MESSAGE_GRANT_LOGON_AS_SERVICE_FAILED, username);
       return -1;
     }
   }
 
   if (! ChangeServiceConfig(service_handle, type, SERVICE_NO_CHANGE, SERVICE_NO_CHANGE, 0, 0, 0, 0, username, password, 0)) {
     if (passwordsize) SecureZeroMemory(password, passwordsize);
-    print_message(stderr, NSSM_MESSAGE_CHANGESERVICECONFIG_FAILED, error_string(GetLastError()));
+    print_message(stderr, TSSM_MESSAGE_CHANGESERVICECONFIG_FAILED, error_string(GetLastError()));
     return -1;
   }
 
@@ -1153,7 +1153,7 @@ int native_dump_objectname(const TCHAR *service_name, void *param, const TCHAR *
   if (ret != 1) return ret;
 
   /* Properly checking for a virtual account requires the actual service name. */
-  if (! _tcsnicmp(NSSM_VIRTUAL_SERVICE_ACCOUNT_DOMAIN, value->string, _tcslen(NSSM_VIRTUAL_SERVICE_ACCOUNT_DOMAIN))) {
+  if (! _tcsnicmp(TSSM_VIRTUAL_SERVICE_ACCOUNT_DOMAIN, value->string, _tcslen(TSSM_VIRTUAL_SERVICE_ACCOUNT_DOMAIN))) {
     TCHAR *name = virtual_account(service_name);
     if (! name) return -1;
     HeapFree(GetProcessHeap(), 0, value->string);
@@ -1177,11 +1177,11 @@ int native_set_startup(const TCHAR *service_name, void *param, const TCHAR *name
 
   /* It makes no sense to try to reset the startup type. */
   if (! value || ! value->string) {
-    print_message(stderr, NSSM_MESSAGE_NO_DEFAULT_VALUE, name);
+    print_message(stderr, TSSM_MESSAGE_NO_DEFAULT_VALUE, name);
     return -1;
   }
 
-  /* Map NSSM_STARTUP_* constant to Windows SERVICE_*_START constant. */
+  /* Map TSSM_STARTUP_* constant to Windows SERVICE_*_START constant. */
   int service_startup = -1;
   int i;
   for (i = 0; startup_strings[i]; i++) {
@@ -1192,32 +1192,32 @@ int native_set_startup(const TCHAR *service_name, void *param, const TCHAR *name
   }
 
   if (service_startup < 0) {
-    print_message(stderr, NSSM_MESSAGE_INVALID_SERVICE_STARTUP, value->string);
+    print_message(stderr, TSSM_MESSAGE_INVALID_SERVICE_STARTUP, value->string);
     for (i = 0; startup_strings[i]; i++) _ftprintf(stderr, _T("%s\n"), startup_strings[i]);
     return -1;
   }
 
   unsigned long startup;
   switch (service_startup) {
-    case NSSM_STARTUP_MANUAL: startup = SERVICE_DEMAND_START; break;
-    case NSSM_STARTUP_DISABLED: startup = SERVICE_DISABLED; break;
+    case TSSM_STARTUP_MANUAL: startup = SERVICE_DEMAND_START; break;
+    case TSSM_STARTUP_DISABLED: startup = SERVICE_DISABLED; break;
     default: startup = SERVICE_AUTO_START;
   }
 
   if (! ChangeServiceConfig(service_handle, SERVICE_NO_CHANGE, startup, SERVICE_NO_CHANGE, 0, 0, 0, 0, 0, 0, 0)) {
-    print_message(stderr, NSSM_MESSAGE_CHANGESERVICECONFIG_FAILED, error_string(GetLastError()));
+    print_message(stderr, TSSM_MESSAGE_CHANGESERVICECONFIG_FAILED, error_string(GetLastError()));
     return -1;
   }
 
   SERVICE_DELAYED_AUTO_START_INFO delayed;
   ZeroMemory(&delayed, sizeof(delayed));
-  if (service_startup == NSSM_STARTUP_DELAYED) delayed.fDelayedAutostart = 1;
+  if (service_startup == TSSM_STARTUP_DELAYED) delayed.fDelayedAutostart = 1;
   else delayed.fDelayedAutostart = 0;
   if (! ChangeServiceConfig2(service_handle, SERVICE_CONFIG_DELAYED_AUTO_START_INFO, &delayed)) {
     unsigned long error = GetLastError();
     /* Pre-Vista we expect to fail with ERROR_INVALID_LEVEL */
     if (error != ERROR_INVALID_LEVEL) {
-      log_event(EVENTLOG_ERROR_TYPE, NSSM_MESSAGE_SERVICE_CONFIG_DELAYED_AUTO_START_INFO_FAILED, service_name, error_string(error), 0);
+      log_event(EVENTLOG_ERROR_TYPE, TSSM_MESSAGE_SERVICE_CONFIG_DELAYED_AUTO_START_INFO_FAILED, service_name, error_string(error), 0);
     }
   }
 
@@ -1250,7 +1250,7 @@ int native_set_type(const TCHAR *service_name, void *param, const TCHAR *name, v
 
   /* It makes no sense to try to reset the service type. */
   if (! value || ! value->string) {
-    print_message(stderr, NSSM_MESSAGE_NO_DEFAULT_VALUE, name);
+    print_message(stderr, TSSM_MESSAGE_NO_DEFAULT_VALUE, name);
     return -1;
   }
 
@@ -1259,11 +1259,11 @@ int native_set_type(const TCHAR *service_name, void *param, const TCHAR *name, v
     and SERVICE_INTERACTIVE_PROCESS.
   */
   unsigned long type = SERVICE_WIN32_OWN_PROCESS;
-  if (str_equiv(value->string, NSSM_INTERACTIVE_PROCESS)) type |= SERVICE_INTERACTIVE_PROCESS;
-  else if (! str_equiv(value->string, NSSM_WIN32_OWN_PROCESS)) {
-    print_message(stderr, NSSM_MESSAGE_INVALID_SERVICE_TYPE, value->string);
-    _ftprintf(stderr, _T("%s\n"), NSSM_WIN32_OWN_PROCESS);
-    _ftprintf(stderr, _T("%s\n"), NSSM_INTERACTIVE_PROCESS);
+  if (str_equiv(value->string, TSSM_INTERACTIVE_PROCESS)) type |= SERVICE_INTERACTIVE_PROCESS;
+  else if (! str_equiv(value->string, TSSM_WIN32_OWN_PROCESS)) {
+    print_message(stderr, TSSM_MESSAGE_INVALID_SERVICE_TYPE, value->string);
+    _ftprintf(stderr, _T("%s\n"), TSSM_WIN32_OWN_PROCESS);
+    _ftprintf(stderr, _T("%s\n"), TSSM_INTERACTIVE_PROCESS);
     return -1;
   }
 
@@ -1275,9 +1275,9 @@ int native_set_type(const TCHAR *service_name, void *param, const TCHAR *name, v
     QUERY_SERVICE_CONFIG *qsc = query_service_config(service_name, service_handle);
     if (! qsc) return -1;
 
-    if (! str_equiv(qsc->lpServiceStartName, NSSM_LOCALSYSTEM_ACCOUNT)) {
+    if (! str_equiv(qsc->lpServiceStartName, TSSM_LOCALSYSTEM_ACCOUNT)) {
       HeapFree(GetProcessHeap(), 0, qsc);
-      print_message(stderr, NSSM_MESSAGE_INTERACTIVE_NOT_LOCALSYSTEM, value->string, service_name, NSSM_LOCALSYSTEM_ACCOUNT);
+      print_message(stderr, TSSM_MESSAGE_INTERACTIVE_NOT_LOCALSYSTEM, value->string, service_name, TSSM_LOCALSYSTEM_ACCOUNT);
       return -1;
     }
 
@@ -1285,7 +1285,7 @@ int native_set_type(const TCHAR *service_name, void *param, const TCHAR *name, v
   }
 
   if (! ChangeServiceConfig(service_handle, type, SERVICE_NO_CHANGE, SERVICE_NO_CHANGE, 0, 0, 0, 0, 0, 0, 0)) {
-    print_message(stderr, NSSM_MESSAGE_CHANGESERVICECONFIG_FAILED, error_string(GetLastError()));
+    print_message(stderr, TSSM_MESSAGE_CHANGESERVICECONFIG_FAILED, error_string(GetLastError()));
     return -1;
   }
 
@@ -1304,13 +1304,13 @@ int native_get_type(const TCHAR *service_name, void *param, const TCHAR *name, v
 
   const TCHAR *string;
   switch (value->numeric) {
-    case SERVICE_KERNEL_DRIVER: string = NSSM_KERNEL_DRIVER; break;
-    case SERVICE_FILE_SYSTEM_DRIVER: string = NSSM_FILE_SYSTEM_DRIVER; break;
-    case SERVICE_WIN32_OWN_PROCESS: string = NSSM_WIN32_OWN_PROCESS; break;
-    case SERVICE_WIN32_SHARE_PROCESS: string = NSSM_WIN32_SHARE_PROCESS; break;
-    case SERVICE_WIN32_OWN_PROCESS|SERVICE_INTERACTIVE_PROCESS: string = NSSM_INTERACTIVE_PROCESS; break;
-    case SERVICE_WIN32_SHARE_PROCESS|SERVICE_INTERACTIVE_PROCESS: string = NSSM_SHARE_INTERACTIVE_PROCESS; break;
-    default: string = NSSM_UNKNOWN;
+    case SERVICE_KERNEL_DRIVER: string = TSSM_KERNEL_DRIVER; break;
+    case SERVICE_FILE_SYSTEM_DRIVER: string = TSSM_FILE_SYSTEM_DRIVER; break;
+    case SERVICE_WIN32_OWN_PROCESS: string = TSSM_WIN32_OWN_PROCESS; break;
+    case SERVICE_WIN32_SHARE_PROCESS: string = TSSM_WIN32_SHARE_PROCESS; break;
+    case SERVICE_WIN32_OWN_PROCESS|SERVICE_INTERACTIVE_PROCESS: string = TSSM_INTERACTIVE_PROCESS; break;
+    case SERVICE_WIN32_SHARE_PROCESS|SERVICE_INTERACTIVE_PROCESS: string = TSSM_SHARE_INTERACTIVE_PROCESS; break;
+    default: string = TSSM_UNKNOWN;
   }
 
   return value_from_string(name, value, string);
@@ -1323,9 +1323,9 @@ int set_setting(const TCHAR *service_name, HKEY key, settings_t *setting, value_
   if (setting->set) ret = setting->set(service_name, (void *) key, setting->name, setting->default_value, value, additional);
   else ret = -1;
 
-  if (! ret) print_message(stdout, NSSM_MESSAGE_RESET_SETTING, setting->name, service_name);
-  else if (ret > 0) print_message(stdout, NSSM_MESSAGE_SET_SETTING, setting->name, service_name);
-  else print_message(stderr, NSSM_MESSAGE_SET_SETTING_FAILED, setting->name, service_name);
+  if (! ret) print_message(stdout, TSSM_MESSAGE_RESET_SETTING, setting->name, service_name);
+  else if (ret > 0) print_message(stdout, TSSM_MESSAGE_SET_SETTING, setting->name, service_name);
+  else print_message(stderr, TSSM_MESSAGE_SET_SETTING_FAILED, setting->name, service_name);
 
   return ret;
 }
@@ -1337,9 +1337,9 @@ int set_setting(const TCHAR *service_name, SC_HANDLE service_handle, settings_t 
   if (setting->set) ret = setting->set(service_name, service_handle, setting->name, setting->default_value, value, additional);
   else ret = -1;
 
-  if (! ret) print_message(stdout, NSSM_MESSAGE_RESET_SETTING, setting->name, service_name);
-  else if (ret > 0) print_message(stdout, NSSM_MESSAGE_SET_SETTING, setting->name, service_name);
-  else print_message(stderr, NSSM_MESSAGE_SET_SETTING_FAILED, setting->name, service_name);
+  if (! ret) print_message(stdout, TSSM_MESSAGE_RESET_SETTING, setting->name, service_name);
+  else if (ret > 0) print_message(stdout, TSSM_MESSAGE_SET_SETTING, setting->name, service_name);
+  else print_message(stderr, TSSM_MESSAGE_SET_SETTING_FAILED, setting->name, service_name);
 
   return ret;
 }
@@ -1365,7 +1365,7 @@ int get_setting(const TCHAR *service_name, HKEY key, settings_t *setting, value_
   }
   else ret = -1;
 
-  if (ret < 0) print_message(stderr, NSSM_MESSAGE_GET_SETTING_FAILED, setting->name, service_name);
+  if (ret < 0) print_message(stderr, TSSM_MESSAGE_GET_SETTING_FAILED, setting->name, service_name);
 
   return ret;
 }
@@ -1397,54 +1397,54 @@ int dump_setting(const TCHAR *service_name, HKEY key, SC_HANDLE service_handle, 
 }
 
 settings_t settings[] = {
-  { NSSM_REG_EXE, REG_EXPAND_SZ, (void *) _T(""), false, 0, setting_set_string, setting_get_string, setting_not_dumpable },
-  { NSSM_REG_FLAGS, REG_EXPAND_SZ, (void *) _T(""), false, 0, setting_set_string, setting_get_string, 0 },
-  { NSSM_REG_DIR, REG_EXPAND_SZ, (void *) _T(""), false, 0, setting_set_string, setting_get_string, 0 },
-  { NSSM_REG_EXIT, REG_SZ, (void *) exit_action_strings[NSSM_EXIT_RESTART], false, ADDITIONAL_MANDATORY, setting_set_exit_action, setting_get_exit_action, setting_dump_exit_action },
-  { NSSM_REG_HOOK, REG_SZ, (void *) _T(""), false, ADDITIONAL_MANDATORY, setting_set_hook, setting_get_hook, setting_dump_hooks },
-  { NSSM_REG_AFFINITY, REG_SZ, 0, false, 0, setting_set_affinity, setting_get_affinity, 0 },
-  { NSSM_REG_ENV, REG_MULTI_SZ, NULL, false, ADDITIONAL_CRLF, setting_set_environment, setting_get_environment, setting_dump_environment },
-  { NSSM_REG_ENV_EXTRA, REG_MULTI_SZ, NULL, false, ADDITIONAL_CRLF, setting_set_environment, setting_get_environment, setting_dump_environment },
-  { NSSM_REG_NO_CONSOLE, REG_DWORD, 0, false, 0, setting_set_number, setting_get_number, 0 },
-  { NSSM_REG_PRIORITY, REG_SZ, (void *) priority_strings[NSSM_NORMAL_PRIORITY], false, 0, setting_set_priority, setting_get_priority, setting_dump_priority },
-  { NSSM_REG_RESTART_DELAY, REG_DWORD, 0, false, 0, setting_set_number, setting_get_number, 0 },
-  { NSSM_REG_STDIN, REG_EXPAND_SZ, NULL, false, 0, setting_set_string, setting_get_string, 0 },
-  { NSSM_REG_STDIN NSSM_REG_STDIO_SHARING, REG_DWORD, (void *) NSSM_STDIN_SHARING, false, 0, setting_set_number, setting_get_number, 0 },
-  { NSSM_REG_STDIN NSSM_REG_STDIO_DISPOSITION, REG_DWORD, (void *) NSSM_STDIN_DISPOSITION, false, 0, setting_set_number, setting_get_number, 0 },
-  { NSSM_REG_STDIN NSSM_REG_STDIO_FLAGS, REG_DWORD, (void *) NSSM_STDIN_FLAGS, false, 0, setting_set_number, setting_get_number, 0 },
-  { NSSM_REG_STDOUT, REG_EXPAND_SZ, NULL, false, 0, setting_set_string, setting_get_string, 0 },
-  { NSSM_REG_STDOUT NSSM_REG_STDIO_SHARING, REG_DWORD, (void *) NSSM_STDOUT_SHARING, false, 0, setting_set_number, setting_get_number, 0 },
-  { NSSM_REG_STDOUT NSSM_REG_STDIO_DISPOSITION, REG_DWORD, (void *) NSSM_STDOUT_DISPOSITION, false, 0, setting_set_number, setting_get_number, 0 },
-  { NSSM_REG_STDOUT NSSM_REG_STDIO_FLAGS, REG_DWORD, (void *) NSSM_STDOUT_FLAGS, false, 0, setting_set_number, setting_get_number, 0 },
-  { NSSM_REG_STDOUT NSSM_REG_STDIO_COPY_AND_TRUNCATE, REG_DWORD, 0, false, 0, setting_set_number, setting_get_number, 0 },
-  { NSSM_REG_STDERR, REG_EXPAND_SZ, NULL, false, 0, setting_set_string, setting_get_string, 0 },
-  { NSSM_REG_STDERR NSSM_REG_STDIO_SHARING, REG_DWORD, (void *) NSSM_STDERR_SHARING, false, 0, setting_set_number, setting_get_number, 0 },
-  { NSSM_REG_STDERR NSSM_REG_STDIO_DISPOSITION, REG_DWORD, (void *) NSSM_STDERR_DISPOSITION, false, 0, setting_set_number, setting_get_number, 0 },
-  { NSSM_REG_STDERR NSSM_REG_STDIO_FLAGS, REG_DWORD, (void *) NSSM_STDERR_FLAGS, false, 0, setting_set_number, setting_get_number, 0 },
-  { NSSM_REG_STDERR NSSM_REG_STDIO_COPY_AND_TRUNCATE, REG_DWORD, 0, false, 0, setting_set_number, setting_get_number, 0 },
-  { NSSM_REG_STOP_METHOD_SKIP, REG_DWORD, 0, false, 0, setting_set_number, setting_get_number, 0 },
-  { NSSM_REG_KILL_CONSOLE_GRACE_PERIOD, REG_DWORD, (void *) NSSM_KILL_CONSOLE_GRACE_PERIOD, false, 0, setting_set_number, setting_get_number, 0 },
-  { NSSM_REG_KILL_WINDOW_GRACE_PERIOD, REG_DWORD, (void *) NSSM_KILL_WINDOW_GRACE_PERIOD, false, 0, setting_set_number, setting_get_number, 0 },
-  { NSSM_REG_KILL_THREADS_GRACE_PERIOD, REG_DWORD, (void *) NSSM_KILL_THREADS_GRACE_PERIOD, false, 0, setting_set_number, setting_get_number, 0 },
-  { NSSM_REG_KILL_PROCESS_TREE, REG_DWORD, (void *) 1, false, 0, setting_set_number, setting_get_number, 0 },
-  { NSSM_REG_THROTTLE, REG_DWORD, (void *) NSSM_RESET_THROTTLE_RESTART, false, 0, setting_set_number, setting_get_number, 0 },
-  { NSSM_REG_HOOK_SHARE_OUTPUT_HANDLES, REG_DWORD, 0, false, 0, setting_set_number, setting_get_number, 0 },
-  { NSSM_REG_ROTATE, REG_DWORD, 0, false, 0, setting_set_number, setting_get_number, 0 },
-  { NSSM_REG_ROTATE_ONLINE, REG_DWORD, 0, false, 0, setting_set_number, setting_get_number, 0 },
-  { NSSM_REG_ROTATE_SECONDS, REG_DWORD, 0, false, 0, setting_set_number, setting_get_number, 0 },
-  { NSSM_REG_ROTATE_BYTES_LOW, REG_DWORD, 0, false, 0, setting_set_number, setting_get_number, 0 },
-  { NSSM_REG_ROTATE_BYTES_HIGH, REG_DWORD, 0, false, 0, setting_set_number, setting_get_number, 0 },
-  { NSSM_REG_ROTATE_DELAY, REG_DWORD, (void *) NSSM_ROTATE_DELAY, false, 0, setting_set_number, setting_get_number, 0 },
-  { NSSM_REG_TIMESTAMP_LOG, REG_DWORD, 0, false, 0, setting_set_number, setting_get_number, 0 },
-  { NSSM_NATIVE_DEPENDONGROUP, REG_MULTI_SZ, NULL, true, ADDITIONAL_CRLF, native_set_dependongroup, native_get_dependongroup, native_dump_dependongroup },
-  { NSSM_NATIVE_DEPENDONSERVICE, REG_MULTI_SZ, NULL, true, ADDITIONAL_CRLF, native_set_dependonservice, native_get_dependonservice, native_dump_dependonservice },
-  { NSSM_NATIVE_DESCRIPTION, REG_SZ, _T(""), true, 0, native_set_description, native_get_description, 0 },
-  { NSSM_NATIVE_DISPLAYNAME, REG_SZ, NULL, true, 0, native_set_displayname, native_get_displayname, 0 },
-  { NSSM_NATIVE_ENVIRONMENT, REG_MULTI_SZ, NULL, true, ADDITIONAL_CRLF, native_set_environment, native_get_environment, native_dump_environment },
-  { NSSM_NATIVE_IMAGEPATH, REG_EXPAND_SZ, NULL, true, 0, native_set_imagepath, native_get_imagepath, setting_not_dumpable },
-  { NSSM_NATIVE_OBJECTNAME, REG_SZ, NSSM_LOCALSYSTEM_ACCOUNT, true, 0, native_set_objectname, native_get_objectname, native_dump_objectname },
-  { NSSM_NATIVE_NAME, REG_SZ, NULL, true, 0, native_set_name, native_get_name, setting_not_dumpable },
-  { NSSM_NATIVE_STARTUP, REG_SZ, NULL, true, 0, native_set_startup, native_get_startup, 0 },
-  { NSSM_NATIVE_TYPE, REG_SZ, NULL, true, 0, native_set_type, native_get_type, 0 },
+  { TSSM_REG_EXE, REG_EXPAND_SZ, (void *) _T(""), false, 0, setting_set_string, setting_get_string, setting_not_dumpable },
+  { TSSM_REG_FLAGS, REG_EXPAND_SZ, (void *) _T(""), false, 0, setting_set_string, setting_get_string, 0 },
+  { TSSM_REG_DIR, REG_EXPAND_SZ, (void *) _T(""), false, 0, setting_set_string, setting_get_string, 0 },
+  { TSSM_REG_EXIT, REG_SZ, (void *) exit_action_strings[TSSM_EXIT_RESTART], false, ADDITIONAL_MANDATORY, setting_set_exit_action, setting_get_exit_action, setting_dump_exit_action },
+  { TSSM_REG_HOOK, REG_SZ, (void *) _T(""), false, ADDITIONAL_MANDATORY, setting_set_hook, setting_get_hook, setting_dump_hooks },
+  { TSSM_REG_AFFINITY, REG_SZ, 0, false, 0, setting_set_affinity, setting_get_affinity, 0 },
+  { TSSM_REG_ENV, REG_MULTI_SZ, NULL, false, ADDITIONAL_CRLF, setting_set_environment, setting_get_environment, setting_dump_environment },
+  { TSSM_REG_ENV_EXTRA, REG_MULTI_SZ, NULL, false, ADDITIONAL_CRLF, setting_set_environment, setting_get_environment, setting_dump_environment },
+  { TSSM_REG_NO_CONSOLE, REG_DWORD, 0, false, 0, setting_set_number, setting_get_number, 0 },
+  { TSSM_REG_PRIORITY, REG_SZ, (void *) priority_strings[TSSM_NORMAL_PRIORITY], false, 0, setting_set_priority, setting_get_priority, setting_dump_priority },
+  { TSSM_REG_RESTART_DELAY, REG_DWORD, 0, false, 0, setting_set_number, setting_get_number, 0 },
+  { TSSM_REG_STDIN, REG_EXPAND_SZ, NULL, false, 0, setting_set_string, setting_get_string, 0 },
+  { TSSM_REG_STDIN TSSM_REG_STDIO_SHARING, REG_DWORD, (void *) TSSM_STDIN_SHARING, false, 0, setting_set_number, setting_get_number, 0 },
+  { TSSM_REG_STDIN TSSM_REG_STDIO_DISPOSITION, REG_DWORD, (void *) TSSM_STDIN_DISPOSITION, false, 0, setting_set_number, setting_get_number, 0 },
+  { TSSM_REG_STDIN TSSM_REG_STDIO_FLAGS, REG_DWORD, (void *) TSSM_STDIN_FLAGS, false, 0, setting_set_number, setting_get_number, 0 },
+  { TSSM_REG_STDOUT, REG_EXPAND_SZ, NULL, false, 0, setting_set_string, setting_get_string, 0 },
+  { TSSM_REG_STDOUT TSSM_REG_STDIO_SHARING, REG_DWORD, (void *) TSSM_STDOUT_SHARING, false, 0, setting_set_number, setting_get_number, 0 },
+  { TSSM_REG_STDOUT TSSM_REG_STDIO_DISPOSITION, REG_DWORD, (void *) TSSM_STDOUT_DISPOSITION, false, 0, setting_set_number, setting_get_number, 0 },
+  { TSSM_REG_STDOUT TSSM_REG_STDIO_FLAGS, REG_DWORD, (void *) TSSM_STDOUT_FLAGS, false, 0, setting_set_number, setting_get_number, 0 },
+  { TSSM_REG_STDOUT TSSM_REG_STDIO_COPY_AND_TRUNCATE, REG_DWORD, 0, false, 0, setting_set_number, setting_get_number, 0 },
+  { TSSM_REG_STDERR, REG_EXPAND_SZ, NULL, false, 0, setting_set_string, setting_get_string, 0 },
+  { TSSM_REG_STDERR TSSM_REG_STDIO_SHARING, REG_DWORD, (void *) TSSM_STDERR_SHARING, false, 0, setting_set_number, setting_get_number, 0 },
+  { TSSM_REG_STDERR TSSM_REG_STDIO_DISPOSITION, REG_DWORD, (void *) TSSM_STDERR_DISPOSITION, false, 0, setting_set_number, setting_get_number, 0 },
+  { TSSM_REG_STDERR TSSM_REG_STDIO_FLAGS, REG_DWORD, (void *) TSSM_STDERR_FLAGS, false, 0, setting_set_number, setting_get_number, 0 },
+  { TSSM_REG_STDERR TSSM_REG_STDIO_COPY_AND_TRUNCATE, REG_DWORD, 0, false, 0, setting_set_number, setting_get_number, 0 },
+  { TSSM_REG_STOP_METHOD_SKIP, REG_DWORD, 0, false, 0, setting_set_number, setting_get_number, 0 },
+  { TSSM_REG_KILL_CONSOLE_GRACE_PERIOD, REG_DWORD, (void *) TSSM_KILL_CONSOLE_GRACE_PERIOD, false, 0, setting_set_number, setting_get_number, 0 },
+  { TSSM_REG_KILL_WINDOW_GRACE_PERIOD, REG_DWORD, (void *) TSSM_KILL_WINDOW_GRACE_PERIOD, false, 0, setting_set_number, setting_get_number, 0 },
+  { TSSM_REG_KILL_THREADS_GRACE_PERIOD, REG_DWORD, (void *) TSSM_KILL_THREADS_GRACE_PERIOD, false, 0, setting_set_number, setting_get_number, 0 },
+  { TSSM_REG_KILL_PROCESS_TREE, REG_DWORD, (void *) 1, false, 0, setting_set_number, setting_get_number, 0 },
+  { TSSM_REG_THROTTLE, REG_DWORD, (void *) TSSM_RESET_THROTTLE_RESTART, false, 0, setting_set_number, setting_get_number, 0 },
+  { TSSM_REG_HOOK_SHARE_OUTPUT_HANDLES, REG_DWORD, 0, false, 0, setting_set_number, setting_get_number, 0 },
+  { TSSM_REG_ROTATE, REG_DWORD, 0, false, 0, setting_set_number, setting_get_number, 0 },
+  { TSSM_REG_ROTATE_ONLINE, REG_DWORD, 0, false, 0, setting_set_number, setting_get_number, 0 },
+  { TSSM_REG_ROTATE_SECONDS, REG_DWORD, 0, false, 0, setting_set_number, setting_get_number, 0 },
+  { TSSM_REG_ROTATE_BYTES_LOW, REG_DWORD, 0, false, 0, setting_set_number, setting_get_number, 0 },
+  { TSSM_REG_ROTATE_BYTES_HIGH, REG_DWORD, 0, false, 0, setting_set_number, setting_get_number, 0 },
+  { TSSM_REG_ROTATE_DELAY, REG_DWORD, (void *) TSSM_ROTATE_DELAY, false, 0, setting_set_number, setting_get_number, 0 },
+  { TSSM_REG_TIMESTAMP_LOG, REG_DWORD, 0, false, 0, setting_set_number, setting_get_number, 0 },
+  { TSSM_NATIVE_DEPENDONGROUP, REG_MULTI_SZ, NULL, true, ADDITIONAL_CRLF, native_set_dependongroup, native_get_dependongroup, native_dump_dependongroup },
+  { TSSM_NATIVE_DEPENDONSERVICE, REG_MULTI_SZ, NULL, true, ADDITIONAL_CRLF, native_set_dependonservice, native_get_dependonservice, native_dump_dependonservice },
+  { TSSM_NATIVE_DESCRIPTION, REG_SZ, _T(""), true, 0, native_set_description, native_get_description, 0 },
+  { TSSM_NATIVE_DISPLAYNAME, REG_SZ, NULL, true, 0, native_set_displayname, native_get_displayname, 0 },
+  { TSSM_NATIVE_ENVIRONMENT, REG_MULTI_SZ, NULL, true, ADDITIONAL_CRLF, native_set_environment, native_get_environment, native_dump_environment },
+  { TSSM_NATIVE_IMAGEPATH, REG_EXPAND_SZ, NULL, true, 0, native_set_imagepath, native_get_imagepath, setting_not_dumpable },
+  { TSSM_NATIVE_OBJECTNAME, REG_SZ, TSSM_LOCALSYSTEM_ACCOUNT, true, 0, native_set_objectname, native_get_objectname, native_dump_objectname },
+  { TSSM_NATIVE_NAME, REG_SZ, NULL, true, 0, native_set_name, native_get_name, setting_not_dumpable },
+  { TSSM_NATIVE_STARTUP, REG_SZ, NULL, true, 0, native_set_startup, native_get_startup, 0 },
+  { TSSM_NATIVE_TYPE, REG_SZ, NULL, true, 0, native_set_type, native_get_type, 0 },
   { NULL, NULL, NULL, NULL, NULL }
 };

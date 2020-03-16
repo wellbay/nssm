@@ -20,7 +20,7 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{32995E05-606F-4D83-A2E6-C2B361B34DF1}</ProjectGuid>
-    <RootNamespace>nssm</RootNamespace>
+    <RootNamespace>tssm</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
@@ -291,7 +291,7 @@
     <ClCompile Include="hook.cpp" />
     <ClCompile Include="imports.cpp" />
     <ClCompile Include="io.cpp" />
-    <ClCompile Include="nssm.cpp" />
+    <ClCompile Include="tssm.cpp" />
     <ClCompile Include="process.cpp" />
     <ClCompile Include="registry.cpp" />
     <ClCompile Include="service.cpp" />
@@ -307,7 +307,7 @@
     <ClInclude Include="hook.h" />
     <ClInclude Include="imports.h" />
     <ClInclude Include="io.h" />
-    <ClInclude Include="nssm.h" />
+    <ClInclude Include="tssm.h" />
     <ClInclude Include="process.h" />
     <ClInclude Include="registry.h" />
     <ClInclude Include="service.h" />
@@ -315,10 +315,10 @@
     <ClInclude Include="utf8.h" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="nssm.ico" />
+    <Image Include="tssm.ico" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="nssm.rc" />
+    <ResourceCompile Include="tssm.rc" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="messages.mc">
