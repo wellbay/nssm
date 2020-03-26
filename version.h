@@ -1,5 +1,5 @@
-#define TSSM_VERSION _T("2.40-4-gc4d4a03")
-#define TSSM_VERSIONINFO 2,40,4,0
-#define TSSM_DATE _T("2020/03/16")
+#define TSSM_VERSION _T("2.40-5-gbbfc6b6")
+#define TSSM_VERSIONINFO 2,40,5,0
+#define TSSM_DATE _T("2020/03/26")
 #define TSSM_FILEFLAGS VS_FF_PRERELEASE
 #define TSSM_COPYRIGHT _T("Joelly Wong,TechSure 2020")
